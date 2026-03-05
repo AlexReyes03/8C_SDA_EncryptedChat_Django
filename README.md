@@ -2,16 +2,16 @@
 
 **Autor:** @AlexReyes03
 
-Este proyecto contiene la migración y reestructuración completa de una aplicación de chat cifrado, dividida en un Backend robusto y un Frontend moderno y optimizado.
+Este proyecto es una plataforma de mensajería instantánea construida desde cero, enfocada en la privacidad y el **Cifrado Extremo a Extremo (E2EE)**. El sistema está dividido en un Backend robusto y escalable, y un Frontend moderno y optimizado.
 
 ## Arquitecturas del Proyecto
 
 ### EncryptedChat_Backend
 El backend está construido con **Python 3 y Django**, implementando una arquitectura limpia orientada a servicios (**Clean Architecture**):
-- **Patrón de Diseño:** "Fat Models, Thin Views, Service Layer". Se prioriza la abstracción de la lógica de negocio compleja (criptografía, manejo de firmas y procesos externos) en capas de servicios (`services/`), manteniendo las vistas (`views/`) estrictamente responsables del enrutamiento HTTP y las respuestas.
+- **Patrón de Diseño:** "Fat Models, Thin Views, Service Layer". Se prioriza la abstracción de la lógica de negocio compleja (criptografía, manejo de perfiles) en capas de servicios (`services/`), manteniendo las vistas (`views/`) estrictamente responsables del enrutamiento HTTP y las respuestas.
 - **Base de Datos:** Uso de **MySQL** para el almacenamiento robusto y relacional de usuarios, salas, mensajes cifrados y llaves públicas.
 - **Estructura Modular:** Las funcionalidades centrales están desacopladas en aplicaciones independientes dentro del directorio `apps/` (ej. `users`, `chat`, `security`, `integrations`).
-- **Tiempo Real:** Uso de **Django Channels** con el servidor ASGI **Daphne** para la gestión de WebSockets asíncronos en el chat.
+- **Tiempo Real:** Uso de **Django Channels** con el servidor ASGI **Daphne** para la gestión nativa y asíncrona de WebSockets.
 - **Seguridad (E2EE):** El servidor actúa como intermediario pasivo. Los mensajes se almacenan cifrados (`encrypted_content`) y el backend solo provee las llaves públicas RSA de los destinatarios.
 - **RESTful API y JWT:** Uso de **Django REST Framework (DRF)** y **SimpleJWT** para endpoints tradicionales, con un Custom Auth Middleware para validar conexiones en tiempo real al Socket.
 
