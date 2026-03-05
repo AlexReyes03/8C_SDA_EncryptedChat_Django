@@ -2,7 +2,7 @@
 
 **Autor:** @AlexReyes03
 
-Este proyecto es una plataforma de mensajería instantánea construida desde cero, enfocada en la privacidad y el **Cifrado Extremo a Extremo (E2EE)**. El sistema está dividido en un Backend robusto y escalable, y un Frontend moderno y optimizado.
+Este proyecto es una plataforma de mensajería instantánea, enfocada en la privacidad y el **Cifrado Extremo a Extremo (E2EE)**. El sistema está dividido en un Backend robusto y escalable, y un Frontend moderno y optimizado.
 
 ## Arquitecturas del Proyecto
 
