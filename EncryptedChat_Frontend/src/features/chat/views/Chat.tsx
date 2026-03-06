@@ -5,13 +5,16 @@ import AddIcon from '@mui/icons-material/Add';
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
 import GroupIcon from '@mui/icons-material/Group';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import { groupServices } from '../../../api/group-services';
 import type { GroupData } from '../../../components/layout/Sidebar';
+import SidebarAside from '../components/SidebarAside';
 
 export default function Chat() {
   const [inputMessage, setInputMessage] = useState('');
   const [activeGroupInfo, setActiveGroupInfo] = useState<GroupData | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isConnected, activeGroupId, sendMessage } = useWebSocket();
 
@@ -29,14 +32,14 @@ export default function Chat() {
   useEffect(() => {
     const fetchGroupInfo = async () => {
       if (activeGroupId) {
-         try {
-            const data = await groupServices.getGroupInfo(activeGroupId);
-            setActiveGroupInfo(data);
-         } catch (e) {
-            console.error("No se pudo obtener info del grupo", e);
-         }
+        try {
+          const data = await groupServices.getGroupInfo(activeGroupId);
+          setActiveGroupInfo(data);
+        } catch (e) {
+          console.error("No se pudo obtener info del grupo", e);
+        }
       } else {
-         setActiveGroupInfo(null);
+        setActiveGroupInfo(null);
       }
     };
     fetchGroupInfo();
@@ -54,10 +57,10 @@ export default function Chat() {
   if (!activeGroupId) {
     return (
       <div className="d-flex flex-column h-100 bg-main pt-2 justify-content-center align-items-center text-center">
-         <div className="text-muted-custom">
-            <h5 className="mb-2 fw-bold text-white-50">Selecciona un grupo</h5>
-            <p className="small">Haz clic en un grupo de la barra lateral para ver su historial o comenzar a chatear.</p>
-         </div>
+        <div className="text-muted-custom">
+          <h5 className="mb-2 fw-bold text-white-50">Selecciona un grupo</h5>
+          <p className="small">Haz clic en un grupo de la barra lateral para ver su historial o comenzar a chatear.</p>
+        </div>
       </div>
     );
   }
@@ -66,65 +69,79 @@ export default function Chat() {
     <div className="d-flex flex-column h-100 bg-main position-relative">
       {/* Inner Navbar (Active Group Info) */}
       <div className="bg-sidebar border-bottom border-custom px-4 py-3 d-flex align-items-center justify-content-between shadow-sm z-2">
-         <div className="d-flex align-items-center">
-            <div
-                className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
-                style={{
-                  width: '45px',
-                  height: '45px',
-                  backgroundColor: 'var(--brand-secondary)',
-                  color: '#ffffff',
-                  fontWeight: 'bold',
-                  fontSize: '1.4rem',
-                }}
-            >
-                {activeGroupInfo ? activeGroupInfo.name.charAt(0).toUpperCase() : '?'}
-            </div>
-            <div>
-               <h5 className="mb-0 text-white fw-bold">{activeGroupInfo ? activeGroupInfo.name : 'Cargando...'}</h5>
-               <small className="text-white-50 d-flex align-items-center">
-                  <GroupIcon fontSize="inherit" className="me-1" />
-                  {activeGroupInfo?.membership?.status === 'accepted' ? 'Miembro activo' : 'Cargando estado...'}
-               </small>
-            </div>
-         </div>
+        <div className="d-flex align-items-center">
+          <div
+            className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+            style={{
+              width: '45px',
+              height: '45px',
+              backgroundColor: 'var(--brand-secondary)',
+              color: '#ffffff',
+              fontWeight: 'bold',
+              fontSize: '1.4rem',
+            }}
+          >
+            {activeGroupInfo ? activeGroupInfo.name.charAt(0).toUpperCase() : '?'}
+          </div>
+          <div>
+            <h5 className="mb-0 text-white fw-bold">{activeGroupInfo ? activeGroupInfo.name : 'Cargando...'}</h5>
+            <small className="text-white-50 d-flex align-items-center">
+              <GroupIcon fontSize="inherit" className="me-1" />
+              {activeGroupInfo ? `${activeGroupInfo.members_count || 0} Miembros` : 'Cargando estado...'}
+            </small>
+          </div>
+        </div>
+        <button
+          className="btn btn-sm text-secondary p-1 rounded-circle"
+          onClick={() => setShowSidebar(!showSidebar)}
+          title="Ver Participantes"
+        >
+          <MoreVertIcon />
+        </button>
       </div>
+
+      <SidebarAside
+        show={showSidebar}
+        onClose={() => setShowSidebar(false)}
+        activeGroupInfo={activeGroupInfo}
+      />
 
       {/* Messages Area */}
       <div className="flex-grow-1 overflow-auto p-3 p-md-4 pt-4">
         <AnimatePresence>
-          {messages.map((msg: { id: string; type: string; apodo?: string; message?: string; timestamp?: string; }) => {
+          {messages.map((msg: { id: string; type: string; apodo?: string; message?: string; timestamp?: string; isHistory?: boolean; }) => {
             const isCurrentUser = msg.apodo === currentUser.apodo;
 
             if (msg.type === 'system') {
-                return (
-                  <motion.div 
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-3"
-                  >
-                    <small className="text-brand-primary fw-medium bg-sidebar px-3 py-1 rounded-pill">{msg.message}</small>
-                  </motion.div>
-                );
+              return (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center mb-3"
+                >
+                  <small className="text-brand-primary fw-medium bg-sidebar px-3 py-1 rounded-pill">{msg.message}</small>
+                </motion.div>
+              );
             }
 
-            if (msg.type === 'user_joined' || msg.type === 'user_left') {
+            if ((msg.type === 'user_joined' || msg.type === 'user_left')) {
+              if (msg.isHistory) return null; // Ignorar notificaciones de union/abandono pasadas que vienen al cargar historial
               return (
-                  <motion.div 
-                    key={msg.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-center mb-3 text-muted-custom small"
-                  >
-                    {msg.type === 'user_joined' ? <LoginIcon fontSize="inherit" className="me-1"/> : <LogoutIcon fontSize="inherit" className="me-1" />}
-                    {msg.apodo} {msg.type === 'user_joined' ? 'se unió al chat' : 'salió del chat'}
-                  </motion.div>
-                );
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center mb-3 text-muted-custom small"
+                >
+                  {msg.type === 'user_joined' ? <LoginIcon fontSize="inherit" className="me-1" /> : <LogoutIcon fontSize="inherit" className="me-1" />}
+                  {msg.apodo} {msg.type === 'user_joined' ? 'se unió al chat' : 'salió del chat'}
+                </motion.div>
+              );
             }
 
             return (
-              <motion.div 
+              <motion.div
                 key={msg.id}
                 initial={{ opacity: 0, y: 20, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -143,11 +160,11 @@ export default function Chat() {
                     {(msg.apodo || '?')[0].toUpperCase()}
                   </div>
                 )}
-                
-                <div 
+
+                <div
                   className={`p-3 rounded-4 shadow-sm ${isCurrentUser ? 'text-white' : 'text-primary'}`}
-                  style={{ 
-                    maxWidth: '75%', 
+                  style={{
+                    maxWidth: '75%',
                     backgroundColor: isCurrentUser ? 'var(--brand-primary)' : 'var(--bg-sidebar)',
                     borderBottomRightRadius: isCurrentUser ? '4px' : '1rem',
                     borderBottomLeftRadius: !isCurrentUser ? '4px' : '1rem',
@@ -155,20 +172,20 @@ export default function Chat() {
                 >
                   <div className="d-flex align-items-baseline mb-1">
                     {!isCurrentUser && (
-                       <span className="fw-bold me-2" style={{ color: 'var(--brand-secondary)' }}>
+                      <span className="fw-bold me-2" style={{ color: 'var(--brand-secondary)' }}>
                         {msg.apodo}
-                       </span>
+                      </span>
                     )}
                     <small className="ms-auto" style={{ color: isCurrentUser ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>
                       {msg.timestamp && !isNaN(Date.parse(msg.timestamp))
                         ? new Date(msg.timestamp).toLocaleTimeString('es-ES', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
                         : ''}
                     </small>
                   </div>
-                  <div className="text-break" style={{ color: isCurrentUser ? '#fff' : 'var(--text-primary)'}}>
+                  <div className="text-break" style={{ color: isCurrentUser ? '#fff' : 'var(--text-primary)' }}>
                     {msg.message}
                   </div>
                 </div>
@@ -218,7 +235,7 @@ export default function Chat() {
                 opacity: isConnected && inputMessage.trim() ? 1 : 0.6
               }}
             >
-              <SendIcon fontSize="small" style={{ marginLeft: '4px' }}/>
+              <SendIcon fontSize="small" style={{ marginLeft: '4px' }} />
             </motion.button>
           </div>
         </form>
