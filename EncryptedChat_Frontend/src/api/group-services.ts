@@ -28,6 +28,12 @@ export const groupServices = {
         return await fetchWrapper.get(`${GROUPS_URL}/${groupId}/`);
     },
     getMyGroups: async () => {
-        return await fetchWrapper.get(`${GROUPS_URL}/me/`);
+        return await fetchWrapper.get(`${GROUPS_URL}/me/?t=${new Date().getTime()}`);
+    },
+    deleteGroup: async (groupId: number) => {
+        return await fetchWrapper.delete(`${GROUPS_URL}/${groupId}/`);
+    },
+    leaveGroup: async (groupId: number) => {
+        return await fetchWrapper.post(`${GROUPS_URL}/${groupId}/leave/`, {});
     }
 };
