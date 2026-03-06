@@ -44,6 +44,8 @@ cd 8C_SDA_EncryptedChat_Django
 ### 2.2 Crear y activar el entorno virtual
 
 ```bash
+cd EncryptedChat_Backend
+
 # Crear el entorno virtual
 python -m venv venv
 
@@ -83,29 +85,24 @@ Crea la base de datos en tu servidor MySQL:
 CREATE DATABASE encrypted_chat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-La configuración de conexión actual en `settings.py` usa los valores por defecto:
+La configuración de la base de datos se maneja a través de variables de entorno. Crea un archivo `.env` en el directorio `EncryptedChat_Backend/` con el siguiente contenido:
 
-```
-Host:     localhost
-Puerto:   3306
-Base de datos: encrypted_chat
-Usuario:  [USERNAME]
-Password: [PASSWORD]
+```env
+DB_NAME=encrypted_chat
+DB_USER=tu_usuario
+DB_PASSWORD=tu_contraseña
+DB_HOST=localhost
+DB_PORT=3306
 ```
 
-> Si tus credenciales son distintas, edita el bloque `DATABASES` en `EncryptedChat_Backend/EncryptedChat_Backend/settings.py`.
+> Asegúrate de configurar los valores correctos de tu conexión local en el archivo `.env`.
 
 ### 2.5 Aplicar migraciones
 
 ```bash
 # Desde EncryptedChat_Backend/
+python manage.py makemigrations
 python manage.py migrate
-```
-
-### 2.6 (Opcional) Crear superusuario para el panel de administración
-
-```bash
-python manage.py createsuperuser
 ```
 
 ---
@@ -166,7 +163,6 @@ npm run dev
 |---|---|
 | Frontend (SPA) | http://localhost:5173 |
 | API REST | http://localhost:8000/api/v1/ |
-| Panel de administración | http://localhost:8000/admin/ |
 | WebSocket | ws://localhost:8000/ws/chat/ |
 
 ---
