@@ -3,7 +3,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from typing import Dict, Any
-from .models import Room, Message
+from .models import Room, Message, Group, GroupMember
 import time
 
 User = get_user_model()
@@ -66,6 +66,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if action == "send_message":
             self.last_message_time = current_time
             await self.handle_send_message(data)
+        elif action == "get_group_history":
+            await self.handle_get_group_history(data)
         else:
             await self.send(json.dumps({"error": "Unknown action"}))
 
@@ -110,6 +112,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(
             json.dumps(
                 {"type": "message_sent_ack", "message_id": message.id, "status": "ok"}
+            )
+        )
+
+    async def handle_get_group_history(self, data: Dict[str, Any]):
+        """
+        Welcome data: return message history for a group.
+        Only if the user is an accepted member of the group.
+        """
+        group_id = data.get("group_id")
+        if group_id is None:
+            await self.send(json.dumps({"error": "Missing group_id"}))
+            return
+
+        result = await self.get_group_history_messages(group_id, self.user)
+        if result is None:
+            await self.send(
+                json.dumps(
+                    {
+                        "error": "FORBIDDEN",
+                        "message": "Not an accepted member of this group or group not found.",
+                    }
+                )
+            )
+            return
+
+        await self.send(
+            json.dumps(
+                {
+                    "type": "group_history",
+                    "group_id": group_id,
+                    "messages": result,
+                }
             )
         )
 
@@ -160,3 +194,35 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return Message.objects.create(
             room=room, sender=sender, encrypted_content=encrypted_content
         )
+
+    @database_sync_to_async
+    def get_group_history_messages(self, group_id, user):
+        """
+        Return list of message dicts for the group's room if user is an accepted member.
+        Returns None if group not found or user is not an accepted member.
+        """
+        try:
+            group = Group.objects.get(pk=group_id)
+        except Group.DoesNotExist:
+            return None
+        if not group.room_id:
+            return []
+        is_accepted = GroupMember.objects.filter(
+            group=group,
+            user=user,
+            status=GroupMember.Status.ACCEPTED,
+        ).exists()
+        if not is_accepted:
+            return None
+        messages = Message.objects.filter(room_id=group.room_id).order_by("created_at")
+        return [
+            {
+                "message_id": m.id,
+                "sender_id": m.sender_id,
+                "sender_username": m.sender.username,
+                "room_id": m.room_id,
+                "encrypted_content": m.encrypted_content,
+                "timestamp": str(m.created_at),
+            }
+            for m in messages
+        ]
