@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import GroupIcon from '@mui/icons-material/Group';
-import CreateGroupModal from '../../features/groups/components/CreateGroupModal';
-import JoinGroupModal from '../../features/groups/components/JoinGroupModal';
+import CreateGroupModal from '../../features/chat/components/CreateGroupModal';
+import JoinGroupModal from '../../features/chat/components/JoinGroupModal';
 
 export default function Sidebar() {
   const [showCreate, setShowCreate] = useState(false);
