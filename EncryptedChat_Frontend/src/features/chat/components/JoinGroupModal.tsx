@@ -65,6 +65,7 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                         required
                         placeholder="XXXX-1234"
                         style={{ letterSpacing: '2px' }}
+                        autoComplete="off"
                       />
                       <div className="form-text text-muted small mt-2">
                         Ingresa el código que te proporcionó el administrador del grupo. Si el grupo es privado, tu solicitud quedará en espera de aprobación.

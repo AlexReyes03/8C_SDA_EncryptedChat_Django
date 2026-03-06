@@ -79,6 +79,7 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                         onChange={handleChange}
                         required
                         placeholder="Ej. Proyecto Alpha"
+                        autoComplete="off"
                       />
                     </div>
                     
@@ -93,6 +94,7 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                         value={formData.max_participants}
                         onChange={handleChange}
                         required
+                        autoComplete="off"
                       />
                     </div>
                     

@@ -140,6 +140,7 @@ export default function Chat() {
               placeholder={isConnected ? "Escribe un mensaje..." : "Conectando..."}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
+              autoComplete="off"
               disabled={!isConnected}
               style={{ paddingLeft: '10px' }}
             />
