@@ -8,14 +8,17 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 """
 
 import os
-from django.core.asgi import get_asgi_application
-from channels.routing import ProtocolTypeRouter, URLRouter
-from apps.users.middleware import JWTAuthMiddlewareStack
-import apps.chat.routing
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "EncryptedChat_Backend.settings")
 
+from django.core.asgi import get_asgi_application
+
+# Initialize Django before importing apps that use models/auth
 django_asgi_app = get_asgi_application()
+
+from channels.routing import ProtocolTypeRouter, URLRouter
+from apps.users.middleware import JWTAuthMiddlewareStack
+import apps.chat.routing
 
 application = ProtocolTypeRouter(
     {

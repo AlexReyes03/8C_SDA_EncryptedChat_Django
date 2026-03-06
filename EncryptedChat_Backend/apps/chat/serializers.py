@@ -21,6 +21,7 @@ class GroupSerializer(serializers.ModelSerializer):
     invite_code = serializers.CharField(read_only=True)
     room_id = serializers.SerializerMethodField()
     members_count = serializers.SerializerMethodField()
+    membership = serializers.SerializerMethodField()
 
     def get_room_id(self, obj):
         return obj.room_id if obj.room_id else None
@@ -35,6 +36,7 @@ class GroupSerializer(serializers.ModelSerializer):
             "is_private",
             "room_id",
             "members_count",
+            "membership",
             "created_at",
             "updated_at",
         )
@@ -42,6 +44,23 @@ class GroupSerializer(serializers.ModelSerializer):
 
     def get_members_count(self, obj):
         return obj.members.filter(status=GroupMember.Status.ACCEPTED).count()
+
+    def get_membership(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        
+        if hasattr(obj, 'user_membership'):
+            membership = obj.user_membership[0] if obj.user_membership else None
+        else:
+            membership = obj.members.filter(user=request.user).first()
+            
+        if membership:
+            return {
+                "role": membership.role,
+                "status": membership.status
+            }
+        return None
 
 
 class GroupCreateSerializer(serializers.ModelSerializer):

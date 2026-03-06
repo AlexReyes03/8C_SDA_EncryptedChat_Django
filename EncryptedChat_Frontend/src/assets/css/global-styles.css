@@ -73,6 +73,12 @@ body {
   background: var(--brand-primary);
 }
 
+/* Ocultar botón nativo de Mostrar Contraseña en MS Edge */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
 /* Autocomplete de inputs en Chrome fondo oscuro */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 

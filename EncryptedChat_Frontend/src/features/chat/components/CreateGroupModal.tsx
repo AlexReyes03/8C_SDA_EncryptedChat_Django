@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
+import { groupServices } from '../../../api/group-services';
+import { useWebSocket } from '../../../hooks/useWebSocket';
 
 interface CreateGroupModalProps {
   show: boolean;
@@ -14,6 +16,12 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
     max_participants: 50,
     is_private: false
   });
+  
+  const { setActiveGroupId } = useWebSocket();
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
@@ -23,11 +31,34 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
     });
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implementar llamada al backend (groupServices.createGroup(formData))
-    console.log('Datos del grupo a crear:', formData);
-    onClose();
+    setErrorMsg('');
+    setSuccessMsg('');
+    setIsLoading(true);
+
+    try {
+      const response = await groupServices.createGroup(formData);
+      setSuccessMsg('¡Grupo creado exitosamente!');
+      
+      // Select the active group id right away
+      if (response && response.id) {
+          setActiveGroupId(response.id);
+      }
+      
+      // Reset form for next time
+      setTimeout(() => {
+        onClose();
+        setFormData({ name: '', max_participants: 50, is_private: false });
+        setSuccessMsg('');
+      }, 3000);
+
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido de red al intentar crear el grupo.';
+      setErrorMsg(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!show) return null;
@@ -57,18 +88,36 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                 className="modal-content bg-main border-custom shadow-lg"
               >
                 <div className="modal-header border-bottom border-custom bg-navbar">
-                  <h5 className="modal-title text-brand-primary fw-bold d-flex align-items-center">
-                    <GroupAddIcon className="me-2" />
+                  <h5 className="modal-title text-white fw-bold d-flex align-items-center">
+                    <GroupAddIcon className="me-2 text-white" />
                     Crear Nuevo Grupo
                   </h5>
-                  <button type="button" className="btn text-white" onClick={onClose}>
+                  <button type="button" className="btn text-white ms-auto" onClick={onClose}>
                     <CloseIcon />
                   </button>
                 </div>
                 
                 <form onSubmit={handleCreate}>
                   <div className="modal-body text-white">
-                    <div className="mb-3">
+                    
+                    <AnimatePresence>
+                      {successMsg && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2 mb-3 fw-medium text-dark" role="alert" style={{ backgroundColor: '#198754', color: '#fff' }}>
+                          <strong className="text-white">¡Listo!</strong> <span className="text-white">{successMsg}</span>
+                          <button type="button" className="btn-close btn-close-white" onClick={() => setSuccessMsg('')}></button>
+                        </motion.div>
+                      )}
+
+                      {errorMsg && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 mb-3 fw-medium text-dark" role="alert" style={{ backgroundColor: '#dc3545', color: '#fff' }}>
+                          <span className="text-white">{errorMsg}</span>
+                          <button type="button" className="btn-close btn-close-white" onClick={() => setErrorMsg('')}></button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <fieldset disabled={isLoading || successMsg !== ''}>
+                      <div className="mb-3">
                       <label htmlFor="groupName" className="form-label text-white-50 small">Nombre del Grupo</label>
                       <input 
                         type="text" 
@@ -79,6 +128,7 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                         onChange={handleChange}
                         required
                         placeholder="Ej. Proyecto Alpha"
+                        autoComplete="off"
                       />
                     </div>
                     
@@ -93,6 +143,7 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                         value={formData.max_participants}
                         onChange={handleChange}
                         required
+                        autoComplete="off"
                       />
                     </div>
                     
@@ -132,14 +183,22 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                       <i className="bi bi-info-circle me-2"></i>
                       Se te asignará automáticamente el rol de Administrador. Podrás transferirlo más adelante.
                     </div>
+                    </fieldset>
                   </div>
                   
                   <div className="modal-footer border-top border-custom">
-                    <button type="button" className="btn btn-outline-secondary" onClick={onClose}>
+                    <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={isLoading}>
                       Cancelar
                     </button>
-                    <button type="submit" className="btn btn-brand-primary text-white text-uppercase fw-bold" style={{ backgroundColor: 'var(--brand-primary)' }}>
-                      Crear Grupo
+                    <button type="submit" disabled={isLoading || successMsg !== ''} className="btn btn-brand-primary text-white fw-bold" style={{ backgroundColor: 'var(--brand-primary)', minWidth: '150px' }}>
+                       {isLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Creando...
+                        </>
+                      ) : (
+                        'Crear Grupo'
+                      )}
                     </button>
                   </div>
                 </form>

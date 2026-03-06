@@ -1,51 +1,71 @@
 import json
+import time
+import uuid
+from typing import List, Dict, Any
+
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
-from typing import Dict, Any
+
 from .models import Room, Message, Group, GroupMember
-import time
 
 User = get_user_model()
+
+CHAT_GROUP_NAME = "chat_general"
+HISTORY_LIMIT = 50
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope["user"]
         if self.user.is_anonymous:
-            # Reject connection if not authenticated via JWT
             await self.close()
             return
 
-        self.user_room_name = f"user_{self.user.id}"
         self.last_message_time = 0
+        self.active_group_id = None  # Grupo activo actual del usuario
 
-        # Create a personal channel group for this user
-        # This is where we will route direct messages meant for them
-        await self.channel_layer.group_add(self.user_room_name, self.channel_name)
-
+        # Unirse al canal general (para eventos de sistema como user_joined/user_left)
+        await self.channel_layer.group_add(CHAT_GROUP_NAME, self.channel_name)
         await self.accept()
+
+        # Broadcast user_joined a todos
+        await self.channel_layer.group_send(
+            CHAT_GROUP_NAME,
+            {
+                "type": "user_joined_event",
+                "id": f"evt-{uuid.uuid4()}",
+                "apodo": self.user.username,
+            },
+        )
+
         print(f"[WebSocket] Connected: {self.user.username} (ID: {self.user.id})")
 
-        # Optionally broadcast a "User is online" status...
-
     async def disconnect(self, close_code):
-        if hasattr(self, "user_room_name"):
-            await self.channel_layer.group_discard(
-                self.user_room_name, self.channel_name
+        if hasattr(self, "user") and not self.user.is_anonymous:
+            # Broadcast user_left antes de salir
+            await self.channel_layer.group_send(
+                CHAT_GROUP_NAME,
+                {
+                    "type": "user_left_event",
+                    "id": f"evt-{uuid.uuid4()}",
+                    "apodo": self.user.username,
+                },
             )
-            print(f"[WebSocket] Disconnected: {self.user.username}")
+
+        # Desuscribirse del grupo activo si existe
+        if hasattr(self, "active_group_id") and self.active_group_id:
+            await self.channel_layer.group_discard(
+                f"group_{self.active_group_id}", self.channel_name
+            )
+
+        await self.channel_layer.group_discard(CHAT_GROUP_NAME, self.channel_name)
+        print(f"[WebSocket] Disconnected: {self.user.username}")
 
     async def receive(self, text_data=None, bytes_data=None):
         """
-        Receives messages from the client (Frontend).
-        Expected JSON format for sending a message:
-        {
-            "action": "send_message",
-            "recipient_id": 2,
-            "encrypted_content": "A1B2C3D4...",
-            "hash": "..." # (Optional integrity validation from frontend)
-        }
+        Recibe mensajes del frontend.
+        Formato esperado: { "action": "send_message" | "get_group_history", ... }
         """
         try:
             data = json.loads(text_data)
@@ -53,9 +73,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send(json.dumps({"error": "Invalid JSON format"}))
             return
 
-        # Simple rate limiting (Anti-spam)
+        # Rate limiting
         current_time = time.time()
-        if current_time - self.last_message_time < 1:  # 1 message per second
+        if current_time - self.last_message_time < 1:
             await self.send(
                 json.dumps({"error": "SPAM_DETECTED", "message": "Pace your messages"})
             )
@@ -72,59 +92,40 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send(json.dumps({"error": "Unknown action"}))
 
     async def handle_send_message(self, data: Dict[str, Any]):
-        recipient_id = data.get("recipient_id")
+        group_id = data.get("group_id")
         encrypted_content = data.get("encrypted_content")
 
-        if not recipient_id or not encrypted_content:
+        if not group_id or not encrypted_content:
             await self.send(
-                json.dumps({"error": "Missing recipient_id or encrypted_content"})
+                json.dumps({"error": "Missing group_id or encrypted_content"})
             )
             return
 
-        # Debug: print encrypted payload as it arrives
-        print(
-            f"[EncryptedChat] Encrypted incoming message "
-            f"from_user={self.user.id} to_user={recipient_id}: {encrypted_content}"
-        )
-
-        recipient = await self.get_user(recipient_id)
-        if not recipient:
-            await self.send(json.dumps({"error": "Recipient not found"}))
+        room = await self.get_room_from_group(group_id, self.user)
+        if not room:
+            await self.send(json.dumps({"error": "Forbidden or group not found"}))
             return
 
-        # Get or create the Direct Message Room
-        room = await self.get_or_create_dm_room(self.user, recipient)
-
-        # Save the message to the Database (opaque to server)
+        # Guardar el mensaje en la Base de Datos
         message = await self.save_message(room, self.user, encrypted_content)
 
-        # Broadcast the message via Channels to the recipient's personal group
-        recipient_group_name = f"user_{recipient.id}"
+        # Broadcast del mensaje via Channels al grupo
+        group_channel_name = f"group_{group_id}"
         await self.channel_layer.group_send(
-            recipient_group_name,
+            group_channel_name,
             {
-                "type": "chat_message",
+                "type": "chat_message_event",
                 "message_id": message.id,
-                "sender_id": self.user.id,
                 "sender_username": self.user.username,
-                "room_id": room.id,
                 "encrypted_content": encrypted_content,
-                "timestamp": str(message.created_at),
+                "timestamp": message.created_at.isoformat() + "Z",
             },
-        )
-
-        # Also echo back to the sender so their UI can add it to the chat log
-        # if they have multiple devices or just for confirmation.
-        await self.send(
-            json.dumps(
-                {"type": "message_sent_ack", "message_id": message.id, "status": "ok"}
-            )
         )
 
     async def handle_get_group_history(self, data: Dict[str, Any]):
         """
-        Welcome data: return message history for a group.
-        Only if the user is an accepted member of the group.
+        Devuelve el historial de mensajes de un grupo.
+        Solo si el usuario es miembro aceptado del grupo.
         """
         group_id = data.get("group_id")
         if group_id is None:
@@ -143,36 +144,66 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             return
 
+        # Suscribir al usuario al canal del grupo solo si la verificacion de membresia fue exitosa
+        if self.active_group_id:
+            await self.channel_layer.group_discard(
+                f"group_{self.active_group_id}", self.channel_name
+            )
+
+        self.active_group_id = group_id
+        await self.channel_layer.group_add(f"group_{group_id}", self.channel_name)
+
+        # Enviar historial al usuario
         await self.send(
             json.dumps(
                 {
                     "type": "group_history",
-                    "group_id": group_id,
                     "messages": result,
                 }
             )
         )
 
-    async def chat_message(self, event):
-        """
-        Handler for messages sent via group_send.
-        Sends the message down the WebSocket to the actual client.
-        """
+    # ---- Channel Layer Event Handlers ----
+
+    async def chat_message_event(self, event):
+        """Handler para mensajes de chat broadcast via group_send."""
         await self.send(
             json.dumps(
                 {
                     "type": "incoming_message",
                     "message_id": event["message_id"],
-                    "sender_id": event["sender_id"],
                     "sender_username": event["sender_username"],
-                    "room_id": event["room_id"],
                     "encrypted_content": event["encrypted_content"],
                     "timestamp": event["timestamp"],
                 }
             )
         )
 
-    # Synchronous DB operations wrapped to be async-friendly
+    async def user_joined_event(self, event):
+        """Handler para user_joined broadcast via group_send."""
+        await self.send(
+            json.dumps(
+                {
+                    "id": event["id"],
+                    "type": "user_joined",
+                    "apodo": event["apodo"],
+                }
+            )
+        )
+
+    async def user_left_event(self, event):
+        """Handler para user_left broadcast via group_send."""
+        await self.send(
+            json.dumps(
+                {
+                    "id": event["id"],
+                    "type": "user_left",
+                    "apodo": event["apodo"],
+                }
+            )
+        )
+
+    # ---- Operaciones sincronas de DB envueltas para compatibilidad async ----
 
     @database_sync_to_async
     def get_user(self, user_id):
@@ -182,21 +213,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return None
 
     @database_sync_to_async
-    def get_or_create_dm_room(self, user1, user2):
-        # A simple way to handle DM rooms is to look for a non-group room
-        # that has exactly these two participants.
-        rooms = Room.objects.filter(is_group=False, participants=user1).filter(
-            participants=user2
-        )
-        if rooms.exists():
-            return rooms.first()
-        else:
-            room = Room.objects.create(is_group=False)
-            room.participants.add(user1, user2)
-            return room
+    def get_room_from_group(self, group_id, user):
+        try:
+            group = Group.objects.get(pk=group_id)
+            is_accepted = GroupMember.objects.filter(
+                group=group,
+                user=user,
+                status=GroupMember.Status.ACCEPTED,
+            ).exists()
+            if is_accepted:
+                return group.room
+        except Group.DoesNotExist:
+            pass
+        return None
 
     @database_sync_to_async
-    def save_message(self, room, sender, encrypted_content):
+    def get_or_create_general_room(self) -> Room:
+        room, _ = Room.objects.get_or_create(
+            is_group=True,
+            name="General",
+        )
+        return room
+
+    @database_sync_to_async
+    def get_recent_messages(self, room: Room, limit: int = 50) -> List[Message]:
+        return list(
+            Message.objects.filter(room=room)
+            .select_related("sender")
+            .order_by("-created_at")[:limit]
+        )[::-1]
+
+    @database_sync_to_async
+    def save_message(self, room: Room, sender, encrypted_content: str) -> Message:
         return Message.objects.create(
             room=room, sender=sender, encrypted_content=encrypted_content
         )
@@ -204,8 +252,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_group_history_messages(self, group_id, user):
         """
-        Return list of message dicts for the group's room if user is an accepted member.
-        Returns None if group not found or user is not an accepted member.
+        Retorna lista de diccionarios de mensajes para la sala del grupo
+        si el usuario es un miembro aceptado.
+        Retorna None si el grupo no existe o el usuario no es miembro aceptado.
         """
         try:
             group = Group.objects.get(pk=group_id)
