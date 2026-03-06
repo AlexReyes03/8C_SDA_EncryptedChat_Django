@@ -11,7 +11,6 @@ from .models import Room, Message, Group, GroupMember
 
 User = get_user_model()
 
-CHAT_GROUP_NAME = "chat_general"
 HISTORY_LIMIT = 50
 
 
@@ -25,41 +24,26 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.last_message_time = 0
         self.active_group_id = None  # Grupo activo actual del usuario
 
-        # Unirse al canal general (para eventos de sistema como user_joined/user_left)
-        await self.channel_layer.group_add(CHAT_GROUP_NAME, self.channel_name)
         await self.accept()
-
-        # Broadcast user_joined a todos
-        await self.channel_layer.group_send(
-            CHAT_GROUP_NAME,
-            {
-                "type": "user_joined_event",
-                "id": f"evt-{uuid.uuid4()}",
-                "apodo": self.user.username,
-            },
-        )
-
         print(f"[WebSocket] Connected: {self.user.username} (ID: {self.user.id})")
 
     async def disconnect(self, close_code):
         if hasattr(self, "user") and not self.user.is_anonymous:
-            # Broadcast user_left antes de salir
-            await self.channel_layer.group_send(
-                CHAT_GROUP_NAME,
-                {
-                    "type": "user_left_event",
-                    "id": f"evt-{uuid.uuid4()}",
-                    "apodo": self.user.username,
-                },
-            )
-
-        # Desuscribirse del grupo activo si existe
-        if hasattr(self, "active_group_id") and self.active_group_id:
-            await self.channel_layer.group_discard(
-                f"group_{self.active_group_id}", self.channel_name
-            )
-
-        await self.channel_layer.group_discard(CHAT_GROUP_NAME, self.channel_name)
+            # Desuscribirse del grupo activo si existe y avisar de la salida
+            if hasattr(self, "active_group_id") and self.active_group_id:
+                # Broadcast user_left a la sala específica antes de salir
+                await self.channel_layer.group_send(
+                    f"group_{self.active_group_id}",
+                    {
+                        "type": "user_left_event",
+                        "id": f"evt-{uuid.uuid4()}",
+                        "apodo": self.user.username,
+                    },
+                )
+                await self.channel_layer.group_discard(
+                    f"group_{self.active_group_id}", self.channel_name
+                )
+                
         print(f"[WebSocket] Disconnected: {self.user.username}")
 
     async def receive(self, text_data=None, bytes_data=None):
@@ -144,14 +128,32 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             return
 
-        # Suscribir al usuario al canal del grupo solo si la verificacion de membresia fue exitosa
-        if self.active_group_id:
+        # Desuscribir de sala anterior y enviar evento "left" si estaba en otra sala
+        if self.active_group_id and self.active_group_id != group_id:
+            await self.channel_layer.group_send(
+                f"group_{self.active_group_id}",
+                {
+                    "type": "user_left_event",
+                    "id": f"evt-{uuid.uuid4()}",
+                    "apodo": self.user.username,
+                },
+            )
             await self.channel_layer.group_discard(
                 f"group_{self.active_group_id}", self.channel_name
             )
 
         self.active_group_id = group_id
         await self.channel_layer.group_add(f"group_{group_id}", self.channel_name)
+        
+        # Enviar evento "joined" a la nueva sala de forma localizada
+        await self.channel_layer.group_send(
+            f"group_{group_id}",
+            {
+                "type": "user_joined_event",
+                "id": f"evt-{uuid.uuid4()}",
+                "apodo": self.user.username,
+            },
+        )
 
         # Enviar historial al usuario
         await self.send(
