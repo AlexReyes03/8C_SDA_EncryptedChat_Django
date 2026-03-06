@@ -70,11 +70,11 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                 className="modal-content bg-main border-custom shadow-lg"
               >
                 <div className="modal-header border-bottom border-custom bg-navbar">
-                  <h5 className="modal-title text-brand-primary fw-bold d-flex align-items-center">
-                    <TagIcon className="me-2" />
+                  <h5 className="modal-title text-white fw-bold d-flex align-items-center">
+                    <TagIcon className="me-2 text-white" />
                     Unirse a un Grupo
                   </h5>
-                  <button type="button" className="btn text-white" onClick={onClose}>
+                  <button type="button" className="btn text-white ms-auto" onClick={onClose}>
                     <CloseIcon />
                   </button>
                 </div>
@@ -84,15 +84,15 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
 
                     <AnimatePresence>
                       {successMsg && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2" role="alert">
-                          <strong>Éxito:</strong> {successMsg}
-                          <button type="button" className="btn-close btn-close-white" style={{ filter: 'invert(1)' }} onClick={() => setSuccessMsg('')}></button>
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2 fw-medium text-dark" role="alert" style={{ backgroundColor: '#198754', color: '#fff' }}>
+                          <strong className="text-white">Éxito:</strong> <span className="text-white">{successMsg}</span>
+                          <button type="button" className="btn-close btn-close-white" onClick={() => setSuccessMsg('')}></button>
                         </motion.div>
                       )}
 
                       {errorMsg && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2" role="alert">
-                          {errorMsg}
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 fw-medium text-dark" role="alert" style={{ backgroundColor: '#dc3545', color: '#fff' }}>
+                          <span className="text-white">{errorMsg}</span>
                           <button type="button" className="btn-close btn-close-white" onClick={() => setErrorMsg('')}></button>
                         </motion.div>
                       )}

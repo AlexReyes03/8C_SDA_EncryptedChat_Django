@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Prefetch
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -100,12 +101,42 @@ class GroupJoinView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        data = GroupSerializer(group).data
+        data = GroupSerializer(group, context={'request': request}).data
         data["membership"] = {
             "role": membership.role,
             "status": membership.status,
         }
         return Response(data, status=status.HTTP_201_CREATED)
+
+
+class GroupLeaveView(APIView):
+    """
+    POST: Leave a group. Deletes the GroupMember association for the request.user.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, pk):
+        group = Group.objects.filter(pk=pk).first()
+        if not group:
+            return Response({"detail": "Group not found."}, status=status.HTTP_404_NOT_FOUND)
+            
+        membership = GroupMember.objects.filter(group=group, user=request.user).first()
+        if not membership:
+            return Response({"detail": "You are not a member of this group."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Optional: prevent leaving if it's the only admin and there are other members
+        if membership.role == GroupMember.Role.ADMIN:
+            admins_count = group.members.filter(role=GroupMember.Role.ADMIN, status=GroupMember.Status.ACCEPTED).count()
+            if admins_count <= 1 and group.members.count() > 1:
+                return Response({"detail": "You must transfer your Admin role before leaving, or delete the group instead."}, status=status.HTTP_400_BAD_REQUEST)
+
+        membership.delete()
+        
+        # If group is empty, delete it
+        if group.members.count() == 0:
+            group.delete()
+
+        return Response({"detail": "Successfully left the group."}, status=status.HTTP_200_OK)
 
 
 class GroupMeView(generics.ListAPIView):
@@ -116,10 +147,50 @@ class GroupMeView(generics.ListAPIView):
     serializer_class = GroupSerializer
 
     def get_queryset(self):
+        user = self.request.user
+        base_qs = Group.objects.filter(
+            members__user=user,
+            members__status=GroupMember.Status.ACCEPTED,
+        ).distinct()
+        
+        return base_qs.prefetch_related(
+            Prefetch(
+                'members',
+                queryset=GroupMember.objects.filter(user=user),
+                to_attr='user_membership'
+            )
+        )
+
+class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET: retrieve a group (must be member)
+    PUT/PATCH: update group (must be admin)
+    DELETE: delete group (must be admin)
+    """
+    permission_classes = (IsAuthenticated,)
+    
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return GroupCreateSerializer
+        return GroupSerializer
+        
+    def get_queryset(self):
         return Group.objects.filter(
             members__user=self.request.user,
             members__status=GroupMember.Status.ACCEPTED,
         ).distinct()
+        
+    def check_object_permissions(self, request, obj):
+        super().check_object_permissions(request, obj)
+        if request.method in ['PUT', 'PATCH', 'DELETE']:
+            is_admin = GroupMember.objects.filter(
+                group=obj, 
+                user=request.user, 
+                role=GroupMember.Role.ADMIN,
+                status=GroupMember.Status.ACCEPTED
+            ).exists()
+            if not is_admin:
+                self.permission_denied(request, message="Only group admins can modify or delete the group.")
 
 
 class GroupRolesView(APIView):

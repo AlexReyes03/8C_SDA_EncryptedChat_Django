@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import { groupServices } from '../../../api/group-services';
+import { useWebSocket } from '../../../hooks/useWebSocket';
 
 interface CreateGroupModalProps {
   show: boolean;
@@ -15,6 +16,9 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
     max_participants: 50,
     is_private: false
   });
+  
+  const { setActiveGroupId } = useWebSocket();
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -35,9 +39,14 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
 
     try {
       const response = await groupServices.createGroup(formData);
-      setSuccessMsg(`¡Grupo creado exitosamente! Código: ${response.invite_code}`);
+      setSuccessMsg('¡Grupo creado exitosamente!');
       
-      // Cerrar y resetear después de unos segundos
+      // Select the active group id right away
+      if (response && response.id) {
+          setActiveGroupId(response.id);
+      }
+      
+      // Reset form for next time
       setTimeout(() => {
         onClose();
         setFormData({ name: '', max_participants: 50, is_private: false });
@@ -79,11 +88,11 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                 className="modal-content bg-main border-custom shadow-lg"
               >
                 <div className="modal-header border-bottom border-custom bg-navbar">
-                  <h5 className="modal-title text-brand-primary fw-bold d-flex align-items-center">
-                    <GroupAddIcon className="me-2" />
+                  <h5 className="modal-title text-white fw-bold d-flex align-items-center">
+                    <GroupAddIcon className="me-2 text-white" />
                     Crear Nuevo Grupo
                   </h5>
-                  <button type="button" className="btn text-white" onClick={onClose}>
+                  <button type="button" className="btn text-white ms-auto" onClick={onClose}>
                     <CloseIcon />
                   </button>
                 </div>
@@ -93,15 +102,15 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                     
                     <AnimatePresence>
                       {successMsg && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2 mb-3" role="alert">
-                          <strong>¡Listo!</strong> {successMsg}
-                          <button type="button" className="btn-close btn-close-white" style={{ filter: 'invert(1)' }} onClick={() => setSuccessMsg('')}></button>
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2 mb-3 fw-medium text-dark" role="alert" style={{ backgroundColor: '#198754', color: '#fff' }}>
+                          <strong className="text-white">¡Listo!</strong> <span className="text-white">{successMsg}</span>
+                          <button type="button" className="btn-close btn-close-white" onClick={() => setSuccessMsg('')}></button>
                         </motion.div>
                       )}
 
                       {errorMsg && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 mb-3" role="alert">
-                          {errorMsg}
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 mb-3 fw-medium text-dark" role="alert" style={{ backgroundColor: '#dc3545', color: '#fff' }}>
+                          <span className="text-white">{errorMsg}</span>
                           <button type="button" className="btn-close btn-close-white" onClick={() => setErrorMsg('')}></button>
                         </motion.div>
                       )}

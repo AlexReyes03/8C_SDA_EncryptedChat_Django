@@ -24,9 +24,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         self.last_message_time = 0
+        self.active_group_id = None # Current active group the user is focused on
 
+<<<<<<< HEAD
         # Join the general chat group
         await self.channel_layer.group_add(CHAT_GROUP_NAME, self.channel_name)
+=======
+        await self.channel_layer.group_add(self.user_room_name, self.channel_name)
+>>>>>>> frontend
         await self.accept()
 
         # Send welcome with message history
@@ -73,7 +78,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "apodo": self.user.username,
                 },
             )
-            print(f"[WebSocket] Disconnected: {self.user.username}")
+        if hasattr(self, "active_group_id") and self.active_group_id:
+             await self.channel_layer.group_discard(
+                 f"group_{self.active_group_id}", self.channel_name
+             )
+        print(f"[WebSocket] Disconnected: {self.user.username}")
 
         await self.channel_layer.group_discard(CHAT_GROUP_NAME, self.channel_name)
 
@@ -99,6 +108,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         msg_type = data.get("type")
         message_content = data.get("message")
 
+<<<<<<< HEAD
         if msg_type != "chat":
             await self.send(json.dumps({"error": "Unknown type"}))
             return
@@ -115,6 +125,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Broadcast to entire group (including sender)
         await self.channel_layer.group_send(
             CHAT_GROUP_NAME,
+=======
+        if action == "send_message":
+            self.last_message_time = current_time
+            await self.handle_send_message(data)
+        elif action == "get_group_history":
+            await self.handle_get_group_history(data)
+        else:
+            await self.send(json.dumps({"error": "Unknown action"}))
+
+    async def handle_send_message(self, data: Dict[str, Any]):
+        group_id = data.get("group_id")
+        encrypted_content = data.get("encrypted_content")
+
+        if not group_id or not encrypted_content:
+            await self.send(
+                json.dumps({"error": "Missing group_id or encrypted_content"})
+            )
+            return
+
+        room = await self.get_room_from_group(group_id, self.user)
+        if not room:
+             await self.send(json.dumps({"error": "Forbidden or group not found"}))
+             return
+
+        # Save the message to the Database
+        message = await self.save_message(room, self.user, encrypted_content)
+
+        # Broadcast the message via Channels to the Group room
+        group_channel_name = f"group_{group_id}"
+        await self.channel_layer.group_send(
+            group_channel_name,
+>>>>>>> frontend
             {
                 "type": "chat_message_event",
                 "id": f"msg-{message.id}",
@@ -124,8 +166,42 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
+<<<<<<< HEAD
     async def chat_message_event(self, event):
         """Handler for chat messages broadcast via group_send."""
+=======
+    async def handle_get_group_history(self, data: Dict[str, Any]):
+        """
+        Welcome data: return message history for a group.
+        Only if the user is an accepted member of the group.
+        """
+        group_id = data.get("group_id")
+        if group_id is None:
+            await self.send(json.dumps({"error": "Missing group_id"}))
+            return
+
+        result = await self.get_group_history_messages(group_id, self.user)
+        if result is None:
+            await self.send(
+                json.dumps(
+                    {
+                        "error": "FORBIDDEN",
+                        "message": "Not an accepted member of this group or group not found.",
+                    }
+                )
+            )
+            return
+            
+        # Suscribe user to the group's channel layer strictly only if member verification succeeded
+        if self.active_group_id:
+             await self.channel_layer.group_discard(
+                 f"group_{self.active_group_id}", self.channel_name
+             )
+        
+        self.active_group_id = group_id
+        await self.channel_layer.group_add(f"group_{group_id}", self.channel_name)
+
+>>>>>>> frontend
         await self.send(
             json.dumps(
                 {
@@ -138,6 +214,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         )
 
+<<<<<<< HEAD
     async def user_joined_event(self, event):
         """Handler for user_joined broadcast via group_send."""
         await self.send(
@@ -161,6 +238,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             )
         )
+=======
+    # Synchronous DB operations wrapped to be async-friendly
+
+    @database_sync_to_async
+    def get_user(self, user_id):
+        try:
+            return User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def get_room_from_group(self, group_id, user):
+        try:
+            group = Group.objects.get(pk=group_id)
+            is_accepted = GroupMember.objects.filter(
+                group=group,
+                user=user,
+                status=GroupMember.Status.ACCEPTED,
+            ).exists()
+            if is_accepted:
+                return group.room
+        except Group.DoesNotExist:
+            pass
+        return None
+>>>>>>> frontend
 
     @database_sync_to_async
     def get_or_create_general_room(self) -> Room:

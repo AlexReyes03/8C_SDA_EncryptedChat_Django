@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import GroupIcon from '@mui/icons-material/Group';
-import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import StarIcon from '@mui/icons-material/Star';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CreateGroupModal from '../../features/chat/components/CreateGroupModal';
 import JoinGroupModal from '../../features/chat/components/JoinGroupModal';
 import GroupSettingsModal from '../../features/chat/components/GroupSettingsModal';
 import { groupServices } from '../../api/group-services';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 // Definición aproximada del modelo de Django
 export interface GroupData {
@@ -28,6 +29,8 @@ export default function Sidebar() {
 
   const [groups, setGroups] = useState<GroupData[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
+  
+  const { activeGroupId, setActiveGroupId, setMessages } = useWebSocket();
 
   const loadGroups = useCallback(async () => {
     try {
@@ -47,11 +50,30 @@ export default function Sidebar() {
   }, [loadGroups]);
 
   // Si cerramos modal, recargar (Refrescamos lista de grupos si se creo o se unió exitosamente)
-  const handleModalClose = () => {
+  const handleModalClose = async () => {
     setShowCreate(false);
     setShowJoin(false);
     setSelectedGroupForSettings(null);
-    loadGroups();
+    
+    try {
+      // Recargar grupos y auto-seleccionar el último si es un modal de creación (esto asume que el backend los ordena, 
+      // o buscamos el último ID. Por simplicidad solo refrescamos la lista).
+      // Lo ideal aquí sería que el Modal devolviera el `newGroupId` y hacer set.
+      const data = await groupServices.getMyGroups();
+      setGroups(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleGroupClick = (id: number) => {
+    if (activeGroupId === id) {
+       setActiveGroupId(null);
+       setMessages([]);
+    } else {
+       setMessages([]); // Limpiar mensajes mientras carga el historial nuevo
+       setActiveGroupId(id);
+    }
   };
 
   return (
@@ -96,13 +118,21 @@ export default function Sidebar() {
               No estás en ningún grupo aún.
             </div>
           ) : (
-            groups.map((group) => (
+            groups.map((group) => {
+              const isAdmin = group.membership?.role === 'admin';
+              return (
               <div 
                 key={group.id} 
+                onClick={() => handleGroupClick(group.id)}
                 className="d-flex align-items-center mb-2 p-2 rounded position-relative" 
-                style={{ backgroundColor: 'rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'background-color 0.2s' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                style={{ 
+                   backgroundColor: activeGroupId === group.id ? '#7C148C' : 'rgba(255,255,255,0.05)', 
+                   cursor: 'pointer', 
+                   transition: 'background-color 0.2s',
+                   boxShadow: activeGroupId === group.id ? '0 0 10px rgba(124, 20, 140, 0.5)' : 'none'
+                }}
+                onMouseEnter={(e) => { if(activeGroupId !== group.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)' }}
+                onMouseLeave={(e) => { if(activeGroupId !== group.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)' }}
               >
                   <div
                     className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
@@ -117,41 +147,29 @@ export default function Sidebar() {
                   >
                     {group.name.charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex-grow-1 overflow-hidden d-flex align-items-center justify-content-between">
-                    <div className="d-flex flex-column text-truncate text-white">
-                      <h6 className="mb-0 text-truncate" style={{ fontSize: '0.95rem' }}>{group.name}</h6>
-                      <small className="text-muted-custom text-truncate" style={{ fontSize: '0.75rem' }}>
-                        {group.membership?.status === 'pending' ? 'Esperando aceptación' : `Room #${group.room_id || 'N/A'}`}
-                      </small>
-                    </div>
-
-                    {/* Controles para Administradores de Grupo */}
-                    <div className="d-flex align-items-center">
-                       {group.membership?.role === 'admin' && (
-                         <WorkspacePremiumIcon 
-                            className="ms-1" 
-                            style={{ color: '#FFD700', filter: 'drop-shadow(0px 0px 4px rgba(255, 215, 0, 0.4))', fontSize: '1.2rem' }} 
-                            titleAccess="Eres Administrador del Grupo"
-                         />
-                       )}
-                       
-                       {group.membership?.role === 'admin' && (
-                         <button 
-                            className="btn btn-sm btn-link text-white-50 p-0 ms-1"
-                            onClick={(e) => {
-                              e.stopPropagation(); // Evitar que el click propague apertura de chat
-                              setSelectedGroupForSettings(group);
-                            }}
-                            title="Configurar Grupo"
-                         >
-                            <MoreVertIcon fontSize="small" className="hover-white" style={{ transition: 'color 0.2s' }} />
-                         </button>
-                       )}
-                    </div>
-
+                  <div className="d-flex w-100 justify-content-between align-items-center">
+                     <div className="d-flex align-items-center">
+                        <h6 className="mb-0 text-white fw-medium text-truncate" style={{ maxWidth: '120px' }}>
+                          {group.name}
+                        </h6>
+                        {isAdmin && (
+                          <StarIcon fontSize="small" className="ms-2 text-white" titleAccess="Administrador" />
+                        )}
+                     </div>
+                     
+                     <div className="d-flex align-items-center">
+                           <button 
+                             className="btn btn-sm text-secondary p-1" 
+                             onClick={(e) => { e.stopPropagation(); setSelectedGroupForSettings(group); }}
+                             title={isAdmin ? "Configuración de Grupo" : "Detalles del Grupo"}
+                           >
+                             <MoreVertIcon fontSize="small" />
+                           </button>
+                     </div>
                   </div>
               </div>
-            ))
+            );
+          })
           )}
         </div>
         
