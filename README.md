@@ -89,8 +89,8 @@ La configuración de conexión actual en `settings.py` usa los valores por defec
 Host:     localhost
 Puerto:   3306
 Base de datos: encrypted_chat
-Usuario:  root
-Password: root
+Usuario:  [USERNAME]
+Password: [PASSWORD]
 ```
 
 > Si tus credenciales son distintas, edita el bloque `DATABASES` en `EncryptedChat_Backend/EncryptedChat_Backend/settings.py`.
