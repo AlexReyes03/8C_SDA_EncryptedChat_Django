@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import TagIcon from '@mui/icons-material/Tag';
+import { groupServices } from '../../../api/group-services';
 
 interface JoinGroupModalProps {
   show: boolean;
@@ -10,12 +11,38 @@ interface JoinGroupModalProps {
 
 export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
   const [inviteCode, setInviteCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  const handleJoin = (e: React.FormEvent) => {
+  const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implementar llamada al backend (groupServices.joinGroup(inviteCode))
-    console.log('Ingresando al grupo con código:', inviteCode);
-    onClose();
+    setErrorMsg('');
+    setSuccessMsg('');
+    setIsLoading(true);
+
+    try {
+      const response = await groupServices.joinGroup(inviteCode.trim().toUpperCase());
+      const isPending = response.membership?.status === 'pending';
+      
+      setSuccessMsg(
+        isPending 
+          ? 'Solicitud enviada. Debes esperar la aprobación del administrador.' 
+          : `¡Te has unido exitosamente al grupo ${response.name || 'solicitado'}!`
+      );
+      
+      setTimeout(() => {
+        onClose();
+        setInviteCode('');
+        setSuccessMsg('');
+      }, 3500);
+
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'El código es inválido o el grupo ya está lleno.';
+      setErrorMsg(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!show) return null;
@@ -54,7 +81,25 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                 
                 <form onSubmit={handleJoin}>
                   <div className="modal-body text-white">
-                    <div className="mb-3">
+
+                    <AnimatePresence>
+                      {successMsg && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2" role="alert">
+                          <strong>Éxito:</strong> {successMsg}
+                          <button type="button" className="btn-close btn-close-white" style={{ filter: 'invert(1)' }} onClick={() => setSuccessMsg('')}></button>
+                        </motion.div>
+                      )}
+
+                      {errorMsg && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2" role="alert">
+                          {errorMsg}
+                          <button type="button" className="btn-close btn-close-white" onClick={() => setErrorMsg('')}></button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    
+                    <fieldset disabled={isLoading || successMsg !== ''}>
+                      <div className="mb-3">
                       <label htmlFor="inviteCode" className="form-label text-white-50 small">Código de Invitación</label>
                       <input 
                         type="text" 
@@ -71,14 +116,22 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                         Ingresa el código que te proporcionó el administrador del grupo. Si el grupo es privado, tu solicitud quedará en espera de aprobación.
                       </div>
                     </div>
+                    </fieldset>
                   </div>
                   
                   <div className="modal-footer border-top border-custom">
-                    <button type="button" className="btn btn-outline-secondary" onClick={onClose}>
+                    <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={isLoading}>
                       Cancelar
                     </button>
-                    <button type="submit" className="btn text-white text-uppercase fw-bold" style={{ backgroundColor: 'var(--brand-secondary)' }}>
-                      Ingresar
+                    <button type="submit" disabled={isLoading || successMsg !== ''} className="btn text-white text-uppercase fw-bold" style={{ backgroundColor: 'var(--brand-secondary)', minWidth: '130px' }}>
+                      {isLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Buscando...
+                        </>
+                      ) : (
+                        'Ingresar'
+                      )}
                     </button>
                   </div>
                 </form>
