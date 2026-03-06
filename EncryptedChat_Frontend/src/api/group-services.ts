@@ -35,5 +35,14 @@ export const groupServices = {
     },
     leaveGroup: async (groupId: number) => {
         return await fetchWrapper.post(`${GROUPS_URL}/${groupId}/leave/`, {});
+    },
+    getGroupMembers: async (groupId: number) => {
+        return await fetchWrapper.get(`${GROUPS_URL}/${groupId}/members/`);
+    },
+    acceptGroupMember: async (groupId: number, userId: number) => {
+        return await fetchWrapper.put(`${GROUPS_URL}/${groupId}/requests/`, { user_id: userId, accept: true });
+    },
+    rejectGroupMember: async (groupId: number, userId: number) => {
+        return await fetchWrapper.put(`${GROUPS_URL}/${groupId}/requests/`, { user_id: userId, accept: false });
     }
 };
