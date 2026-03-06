@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { authServices } from '../../api/auth-services';
+import logoMini from '../../assets/img/logo_mini.png';
 import LogoutIcon from '@mui/icons-material/Logout';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 export default function Navbar() {
@@ -19,11 +19,9 @@ export default function Navbar() {
       <div className="container-fluid">
         {/* Brand / Logo */}
         <div className="d-flex align-items-center">
-          <div className="bg-brand-primary rounded p-1 me-2 d-flex align-items-center justify-content-center">
-            <ChatBubbleOutlineIcon style={{ color: '#fff', fontSize: '1.2rem' }} />
-          </div>
-          <span className="navbar-brand mb-0 h1 text-white fw-bold fs-5 tracking-wide">
-            Encrypted<span className="text-brand-primary">Chat</span>
+          <img src={logoMini} alt="Logo" className="me-2" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+          <span className="navbar-brand mb-0 h1 text-brand-primary fw-bold text-white">
+            EncryptedChat
           </span>
         </div>
 
