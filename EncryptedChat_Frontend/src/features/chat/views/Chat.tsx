@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SendIcon from '@mui/icons-material/Send';
+import AddIcon from '@mui/icons-material/Add';
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
 import GroupIcon from '@mui/icons-material/Group';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import { groupServices } from '../../../api/group-services';
 import type { GroupData } from '../../../components/layout/Sidebar';
@@ -89,6 +91,13 @@ export default function Chat() {
             </small>
           </div>
         </div>
+        <button
+          className="btn btn-sm text-secondary p-1 rounded-circle"
+          onClick={() => setShowSidebar(!showSidebar)}
+          title="Ver Participantes"
+        >
+          <MoreVertIcon />
+        </button>
       </div>
 
       <SidebarAside
@@ -191,6 +200,15 @@ export default function Chat() {
       <div className="p-3 bg-sidebar border-top border-custom mt-auto z-3">
         <form onSubmit={handleSendMessage}>
           <div className="input-group align-items-center rounded-3 overflow-hidden bg-navbar border border-custom p-1">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              type="button"
+              className="btn text-secondary"
+              title="Añadir adjunto o acción"
+            >
+              <AddIcon />
+            </motion.button>
             <input
               type="text"
               className="form-control bg-transparent border-0 text-white shadow-none"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import TagIcon from '@mui/icons-material/Tag';
@@ -14,6 +14,25 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    if (!successMsg && !errorMsg) return;
+
+    const timer = setTimeout(() => {
+      setSuccessMsg('');
+      setErrorMsg('');
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [successMsg, errorMsg]);
+
+  useEffect(() => {
+    if (!show) {
+      setInviteCode('');
+      setErrorMsg('');
+      setSuccessMsg('');
+    }
+  }, [show]);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,14 +105,12 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                       {successMsg && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2 fw-medium text-dark" role="alert" style={{ backgroundColor: '#198754', color: '#fff' }}>
                           <strong className="text-white">Éxito:</strong> <span className="text-white">{successMsg}</span>
-                          <button type="button" className="btn-close btn-close-white" onClick={() => setSuccessMsg('')}></button>
                         </motion.div>
                       )}
 
                       {errorMsg && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 fw-medium text-dark" role="alert" style={{ backgroundColor: '#dc3545', color: '#fff' }}>
                           <span className="text-white">{errorMsg}</span>
-                          <button type="button" className="btn-close btn-close-white" onClick={() => setErrorMsg('')}></button>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -106,7 +123,11 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                           className="form-control text-center bg-sidebar border-custom text-white shadow-none fs-4 fw-bold letter-spacing-1"
                           id="inviteCode"
                           value={inviteCode}
-                          onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                          onChange={(e) => {
+                            setInviteCode(e.target.value.toUpperCase());
+                            setErrorMsg('');
+                            setSuccessMsg('');
+                          }}
                           required
                           placeholder="XXXX-1234"
                           style={{ letterSpacing: '2px' }}

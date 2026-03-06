@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
@@ -23,12 +23,33 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  useEffect(() => {
+    if (!successMsg && !errorMsg) return;
+
+    const timer = setTimeout(() => {
+      setSuccessMsg('');
+      setErrorMsg('');
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [successMsg, errorMsg]);
+
+  useEffect(() => {
+    if (!show) {
+      setFormData({ name: '', max_participants: 50, is_private: false });
+      setErrorMsg('');
+      setSuccessMsg('');
+    }
+  }, [show]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
     setFormData({
       ...formData,
       [e.target.name]: value
     });
+    setErrorMsg('');
+    setSuccessMsg('');
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -179,10 +200,6 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                         </div>
                       </div>
 
-                      <div className="alert alert-info bg-brand-primary border-0 text-dark small mb-0 mt-4 rounded-3 d-flex align-items-center" role="alert" style={{ '--bs-bg-opacity': .2 } as React.CSSProperties}>
-                        <i className="bi bi-info-circle me-2"></i>
-                        Se te asignará automáticamente el rol de Administrador. Podrás transferirlo más adelante.
-                      </div>
                     </fieldset>
                   </div>
 
