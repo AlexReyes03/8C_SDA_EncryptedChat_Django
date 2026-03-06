@@ -5,10 +5,11 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import LogoutIcon from '@mui/icons-material/Logout';
 import { groupServices } from '../../../api/group-services';
 import type { UpdateGroupPayload } from '../../../api/group-services';
 import type { GroupData } from '../../../components/layout/Sidebar';
+import LogoutIcon from '@mui/icons-material/Logout';
+import ConfirmActionModal from './ConfirmActionModal';
 
 interface GroupSettingsModalProps {
   show: boolean;
@@ -31,6 +32,10 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // States for ConfirmActionModal
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmActionType, setConfirmActionType] = useState<'leave' | 'delete'>('leave');
 
   useEffect(() => {
     if (group && show) {
@@ -84,11 +89,13 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteRequest = () => {
+    setConfirmActionType('delete');
+    setShowConfirmModal(true);
+  };
+
+  const executeDelete = async () => {
     if (!group) return;
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el grupo "${group.name}"? Esta acción no se puede deshacer.`)) {
-      return;
-    }
 
     setErrorMsg('');
     setSuccessMsg('');
@@ -97,6 +104,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
     try {
       await groupServices.deleteGroup(group.id);
       setSuccessMsg('El grupo ha sido eliminado exitosamente.');
+      setShowConfirmModal(false);
 
       setTimeout(() => {
         onClose();
@@ -111,11 +119,13 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
     }
   };
 
-  const handleLeaveGroup = async () => {
+  const handleLeaveRequest = () => {
+    setConfirmActionType('leave');
+    setShowConfirmModal(true);
+  };
+
+  const executeLeave = async () => {
     if (!group) return;
-    if (!window.confirm(`¿Estás seguro de que deseas abandonar el grupo "${group.name}"?`)) {
-      return;
-    }
 
     setErrorMsg('');
     setSuccessMsg('');
@@ -124,6 +134,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
     try {
       await groupServices.leaveGroup(group.id);
       setSuccessMsg('Has abandonado el grupo exitosamente.');
+      setShowConfirmModal(false);
       setTimeout(() => {
         onClose();
         window.location.reload(); // Recargar para limpiar
@@ -133,6 +144,14 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
       setErrorMsg(errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmActionType === 'delete') {
+      executeDelete();
+    } else {
+      executeLeave();
     }
   };
 
@@ -295,7 +314,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
                         <button
                           type="button"
                           className="btn btn-outline-danger fw-bold d-flex align-items-center"
-                          onClick={handleDelete}
+                          onClick={handleDeleteRequest}
                           disabled={isLoading}
                           title="Eliminar grupo permanentemente"
                         >
@@ -305,7 +324,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
                         <button
                           type="button"
                           className="btn btn-outline-danger fw-bold d-flex align-items-center"
-                          onClick={handleLeaveGroup}
+                          onClick={handleLeaveRequest}
                           disabled={isLoading}
                           title="Abandonar este grupo"
                         >
@@ -335,6 +354,21 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
               </motion.div>
             </div>
           </div>
+
+          <ConfirmActionModal
+            show={showConfirmModal}
+            onClose={() => setShowConfirmModal(false)}
+            onConfirm={handleConfirmAction}
+            isLoading={isLoading}
+            title={confirmActionType === 'delete' ? 'Eliminar Grupo' : 'Abandonar Grupo'}
+            message={
+              <p>
+                ¿Estás seguro de que deseas {confirmActionType === 'delete' ? 'eliminar permanentemente' : 'abandonar'} el grupo <strong className="text-white">{group.name}</strong>?
+              </p>
+            }
+            subMessage={confirmActionType === 'delete' ? 'Esta acción no se puede deshacer.' : undefined}
+            confirmText={confirmActionType === 'delete' ? 'Eliminar Grupo' : 'Abandonar Grupo'}
+          />
         </>
       )}
     </AnimatePresence>

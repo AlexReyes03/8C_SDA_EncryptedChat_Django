@@ -348,3 +348,42 @@ class GroupRequestsView(APIView):
         else:
             target.delete()
             return Response({"detail": "Request rejected."}, status=status.HTTP_200_OK)
+
+class GroupKickView(APIView):
+    """
+    POST: Kick a member. Only group admins.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, pk):
+        group = Group.objects.filter(pk=pk).first()
+        if not group:
+            return Response({"detail": "Group not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        caller = GroupMember.objects.filter(
+            group=group,
+            user=request.user,
+            status=GroupMember.Status.ACCEPTED,
+        ).first()
+
+        if not caller or caller.role != GroupMember.Role.ADMIN:
+            return Response({"detail": "Only admins can kick members."}, status=status.HTTP_403_FORBIDDEN)
+
+        user_id = request.data.get("user_id")
+        if not user_id:
+            return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if str(user_id) == str(request.user.id):
+            return Response({"detail": "Cannot kick yourself."}, status=status.HTTP_400_BAD_REQUEST)
+
+        target = GroupMember.objects.filter(
+            group=group,
+            user_id=user_id,
+            status=GroupMember.Status.ACCEPTED,
+        ).first()
+
+        if not target:
+            return Response({"detail": "Member not found in group."}, status=status.HTTP_404_NOT_FOUND)
+            
+        target.delete()
+        return Response({"detail": "Member kicked successfully."}, status=status.HTTP_200_OK)

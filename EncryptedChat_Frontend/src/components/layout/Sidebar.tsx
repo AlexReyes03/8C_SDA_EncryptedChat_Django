@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import GroupIcon from '@mui/icons-material/Group';
 import StarIcon from '@mui/icons-material/Star';
+import LockIcon from '@mui/icons-material/Lock';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CreateGroupModal from '../../features/chat/components/CreateGroupModal';
 import JoinGroupModal from '../../features/chat/components/JoinGroupModal';
@@ -19,6 +20,7 @@ export interface GroupData {
     status: 'pending' | 'accepted';
   };
   members_count?: number;
+  is_private?: boolean;
 }
 
 export default function Sidebar() {
@@ -155,6 +157,9 @@ export default function Sidebar() {
                       </h6>
                       {isAdmin && (
                         <StarIcon fontSize="small" className="ms-2 text-white" titleAccess="Administrador" />
+                      )}
+                      {group.is_private && (
+                        <LockIcon fontSize="small" className="ms-1 text-white-50" titleAccess="Grupo Privado" />
                       )}
                     </div>
 
