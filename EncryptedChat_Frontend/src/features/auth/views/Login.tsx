@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -15,8 +15,19 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!successMsg && !error) return;
+
+    const timer = setTimeout(() => {
+      setSuccessMsg('');
+      setError('');
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [successMsg, error]);
 
   const isFormValid = () => {
     if (isRegistering) {
@@ -24,6 +35,7 @@ export default function Login() {
     }
     return username.trim() !== '' && password.trim() !== '';
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +54,7 @@ export default function Login() {
           password,
           public_key: "Esto se va a enviar desde el front de React"
         });
-        
+
         // Si el registro es exitoso, volvemos a mostrar el formulario de login limpiando contraseña
         setIsRegistering(false);
         setPassword('');
@@ -50,11 +62,11 @@ export default function Login() {
       } else {
         // Llamada real al servicio de Django usando el fetchWrapper (Login)
         const response = await authServices.login(username, password);
-        
+
         localStorage.setItem('access_token', response.access);
         localStorage.setItem('refresh_token', response.refresh);
         localStorage.setItem('username', username);
-        
+
         // Redirigir al chat
         navigate('/chat', { replace: true });
       }
@@ -89,7 +101,7 @@ export default function Login() {
       <div className="container position-relative" style={{ zIndex: 2 }}>
         <div className="row justify-content-center">
           <div className="col-12 col-md-6 col-lg-5">
-            <motion.div 
+            <motion.div
               initial={{ y: -30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
@@ -108,11 +120,11 @@ export default function Login() {
               <h1 className="fw-bold text-brand-primary">EncryptedChat</h1>
             </motion.div>
 
-            <motion.div 
-               initial={{ scale: 0.95, opacity: 0 }}
-               animate={{ scale: 1, opacity: 1 }}
-               transition={{ duration: 0.5, delay: 0.2 }}
-               className="card shadow-lg border-0 bg-sidebar text-primary rounded-4"
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="card shadow-lg border-0 bg-sidebar text-primary rounded-4"
             >
               <div className="card-body p-4 p-md-5">
                 <h2 className="text-center mb-2 text-brand-primary fw-bold">
@@ -123,10 +135,10 @@ export default function Login() {
                 </p>
 
                 {successMsg && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="alert alert-success alert-dismissible fade show" 
+                    className="alert alert-success alert-dismissible fade show"
                     role="alert"
                   >
                     {successMsg}
@@ -139,75 +151,77 @@ export default function Login() {
                 )}
 
                 {error && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="alert alert-danger alert-dismissible fade show" 
-                    role="alert"
-                  >
-                    {error}
-                    <button
-                      type="button"
-                      className="btn-close btn-close-white"
-                      onClick={() => setError('')}
-                    ></button>
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 fw-medium text-dark" role="alert" style={{ backgroundColor: '#dc3545', color: '#fff' }}>
+                    <span className="text-white">{error}</span>
                   </motion.div>
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    <div className="form-floating mb-3">
-                      <input
-                        type="text"
-                        className="form-control bg-navbar text-primary border-custom"
-                        id="username"
-                        placeholder="Usuario"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        required
-                        autoComplete="off"
-                      />
+                  <div className="form-floating mb-3">
+                    <input
+                      type="text"
+                      className="form-control bg-navbar text-primary border-custom"
+                      id="username"
+                      placeholder="Usuario"
+                      value={username}
+                      onChange={(e) => {
+                        setUsername(e.target.value);
+                        setError('');
+                        setSuccessMsg('');
+                      }}
+                      required
+                      autoComplete="off"
+                    />
                     <label htmlFor="username" className="text-secondary">
                       Usuario
                     </label>
                   </div>
 
                   <AnimatePresence>
-                  {isRegistering && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      style={{ overflow: 'hidden' }}
-                      className="form-floating mb-3"
-                    >
-                      <input
-                        type="email"
-                        className="form-control bg-navbar text-primary border-custom"
-                        id="email"
-                        placeholder="Correo electrónico"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required={isRegistering}
-                        autoComplete="off"
-                      />
-                      <label htmlFor="email" className="text-secondary">
-                        Correo electrónico
-                      </label>
-                    </motion.div>
-                  )}
+                    {isRegistering && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        style={{ overflow: 'hidden' }}
+                        className="form-floating mb-3"
+                      >
+                        <input
+                          type="email"
+                          className="form-control bg-navbar text-primary border-custom"
+                          id="email"
+                          placeholder="Correo electrónico"
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            setError('');
+                            setSuccessMsg('');
+                          }}
+                          required={isRegistering}
+                          autoComplete="off"
+                        />
+                        <label htmlFor="email" className="text-secondary">
+                          Correo electrónico
+                        </label>
+                      </motion.div>
+                    )}
                   </AnimatePresence>
 
-                    <div className="form-floating mb-4 position-relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        className="form-control bg-navbar text-primary border-custom pe-5"
-                        id="password"
-                        placeholder="Contraseña"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        autoComplete="off"
-                      />
+                  <div className="form-floating mb-4 position-relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className="form-control bg-navbar text-primary border-custom pe-5"
+                      id="password"
+                      placeholder="Contraseña"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setError('');
+                        setSuccessMsg('');
+                      }}
+                      required
+                      autoComplete="off"
+                    />
                     <label htmlFor="password" className="text-secondary">
                       Contraseña
                     </label>
@@ -243,13 +257,13 @@ export default function Login() {
                       isRegistering ? 'Completar Registro' : 'Iniciar Sesión'
                     )}
                   </motion.button>
-                  
+
                   <div className="text-center mt-3">
                     <span className="text-muted-custom">
                       {isRegistering ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
                     </span>
-                    <a 
-                      href="#" 
+                    <a
+                      href="#"
                       className="text-brand-primary text-decoration-none fw-bold ms-2"
                       onClick={toggleMode}
                     >
@@ -260,14 +274,14 @@ export default function Login() {
               </div>
             </motion.div>
 
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="text-center mt-4 text-muted-custom" 
+              className="text-center mt-4 text-muted-custom"
               style={{ fontSize: '13px' }}
             >
-              EncryptedChat v1.0 - Copyright © 2026 Seguridad Informática UTEZ
+              EncryptedChat v1.0 - Copyright © 2026 StackFlow ACK 
             </motion.p>
           </div>
         </div>
