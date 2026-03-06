@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { authServices } from '../../api/auth-services';
+import logoMini from '../../assets/img/logo_mini.png';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -15,8 +16,8 @@ export default function Navbar() {
     <nav className="navbar navbar-dark px-3 py-2 bg-navbar w-100" style={{ minHeight: '60px', zIndex: 10 }}>
       <div className="container-fluid">
         <div className="d-flex align-items-center">
-          {/* Aquí puedes usar un @mui/icon de Chat si no tienes el logo_mini.png en este proyecto aún */}
-          <span className="navbar-brand mb-0 h1 text-brand-primary fw-bold">
+          <img src={logoMini} alt="Logo" className="me-2" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+          <span className="navbar-brand mb-0 h1 text-brand-primary fw-bold text-white">
             EncryptedChat
           </span>
         </div>
