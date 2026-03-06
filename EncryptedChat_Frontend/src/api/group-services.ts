@@ -44,5 +44,8 @@ export const groupServices = {
     },
     rejectGroupMember: async (groupId: number, userId: number) => {
         return await fetchWrapper.put(`${GROUPS_URL}/${groupId}/requests/`, { user_id: userId, accept: false });
+    },
+    kickGroupMember: async (groupId: number, userId: number) => {
+        return await fetchWrapper.post(`${GROUPS_URL}/${groupId}/kick/`, { user_id: userId });
     }
 };

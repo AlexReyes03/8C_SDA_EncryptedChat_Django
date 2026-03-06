@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { groupServices } from '../../../api/group-services';
 import type { GroupData } from '../../../components/layout/Sidebar';
 import AcceptUsersModal from './AcceptUsersModal';
+import ConfirmKickModal from './ConfirmKickModal';
 
 interface SidebarAsideProps {
     show: boolean;
@@ -25,14 +26,12 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
     const [isLoading, setIsLoading] = useState(false);
     const [showAcceptModal, setShowAcceptModal] = useState(false);
 
-    useEffect(() => {
-        if (show && activeGroupInfo) {
-            loadMembers();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [show, activeGroupInfo]);
+    // Kick Modal State
+    const [showKickModal, setShowKickModal] = useState(false);
+    const [selectedUserToKick, setSelectedUserToKick] = useState<{ id: number, username: string } | null>(null);
+    const [isKicking, setIsKicking] = useState(false);
 
-    const loadMembers = async () => {
+    const loadMembers = useCallback(async () => {
         if (!activeGroupInfo) return;
         setIsLoading(true);
         try {
@@ -42,6 +41,36 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
             console.error("Error al cargar miembros del grupo", e);
         } finally {
             setIsLoading(false);
+        }
+    }, [activeGroupInfo]);
+
+    useEffect(() => {
+        if (show && activeGroupInfo) {
+            loadMembers();
+        }
+    }, [show, activeGroupInfo, loadMembers]);
+
+    const handleKickMember = (userId: number, username: string) => {
+        setSelectedUserToKick({ id: userId, username });
+        setShowKickModal(true);
+    };
+
+    const confirmKick = async () => {
+        if (!activeGroupInfo || !selectedUserToKick) return;
+
+        setIsKicking(true);
+        try {
+            await groupServices.kickGroupMember(activeGroupInfo.id, selectedUserToKick.id);
+            // Visual notification logic could be added here (e.g., Toast) instead of alert if requested
+            setShowKickModal(false);
+            setSelectedUserToKick(null);
+            loadMembers();
+        } catch (e) {
+            console.error("Error al expulsar usuario", e);
+            // Could replace this alert with a Toast error message as well
+            window.alert("Error al expulsar al usuario.");
+        } finally {
+            setIsKicking(false);
         }
     };
 
@@ -108,12 +137,21 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
                                                 >
                                                     {member.username.charAt(0).toUpperCase()}
                                                 </div>
-                                                <div className="d-flex flex-column">
-                                                    <span className="fw-medium text-truncate" style={{ maxWidth: '180px' }}>{member.username}</span>
+                                                <div className="d-flex flex-column flex-grow-1">
+                                                    <span className="fw-medium text-truncate" style={{ maxWidth: '140px' }}>{member.username}</span>
                                                     <small className="text-muted-custom">
                                                         {member.role === 'admin' ? 'Administrador' : 'Miembro'}
                                                     </small>
                                                 </div>
+                                                {isAdmin && member.role !== 'admin' && (
+                                                    <button
+                                                        className="btn btn-sm text-danger p-1 border-0"
+                                                        onClick={() => handleKickMember(member.user_id, member.username)}
+                                                        title="Expulsar"
+                                                    >
+                                                        <CloseIcon fontSize="small" />
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -160,6 +198,14 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
                     if (activeGroupInfo) loadMembers(); // Reload when closing the modal
                 }}
                 groupId={activeGroupInfo?.id || null}
+            />
+
+            <ConfirmKickModal
+                show={showKickModal}
+                onClose={() => setShowKickModal(false)}
+                onConfirm={confirmKick}
+                username={selectedUserToKick?.username || ''}
+                isLoading={isKicking}
             />
         </>
     );
