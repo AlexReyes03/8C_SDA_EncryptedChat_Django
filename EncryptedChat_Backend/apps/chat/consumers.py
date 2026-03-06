@@ -6,8 +6,9 @@ from typing import List
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
-
-from .models import Room, Message
+from typing import Dict, Any
+from .models import Room, Message, Group, GroupMember
+import time
 
 User = get_user_model()
 
@@ -180,3 +181,35 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return Message.objects.create(
             room=room, sender=sender, encrypted_content=encrypted_content
         )
+
+    @database_sync_to_async
+    def get_group_history_messages(self, group_id, user):
+        """
+        Return list of message dicts for the group's room if user is an accepted member.
+        Returns None if group not found or user is not an accepted member.
+        """
+        try:
+            group = Group.objects.get(pk=group_id)
+        except Group.DoesNotExist:
+            return None
+        if not group.room_id:
+            return []
+        is_accepted = GroupMember.objects.filter(
+            group=group,
+            user=user,
+            status=GroupMember.Status.ACCEPTED,
+        ).exists()
+        if not is_accepted:
+            return None
+        messages = Message.objects.filter(room_id=group.room_id).order_by("created_at")
+        return [
+            {
+                "message_id": m.id,
+                "sender_id": m.sender_id,
+                "sender_username": m.sender.username,
+                "room_id": m.room_id,
+                "encrypted_content": m.encrypted_content,
+                "timestamp": str(m.created_at),
+            }
+            for m in messages
+        ]

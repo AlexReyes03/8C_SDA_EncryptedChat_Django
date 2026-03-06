@@ -1,0 +1,90 @@
+:root {
+  /* Paleta de colores principal */
+  --bg-main: #131313;
+  --bg-sidebar: #1C1E21;
+  --bg-navbar: #22272B;
+  --brand-primary: #7416F0;
+  --brand-secondary: #7C148C;
+
+  /* Colores de texto */
+  --text-primary: #ffffff;
+  --text-secondary: #aaa;
+  --text-muted: #666;
+
+  /* Colores de bordes o separadores */
+  --border-color: #444;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Clases utilitarias de fondo */
+.bg-main {
+  background-color: var(--bg-main) !important;
+}
+
+.bg-sidebar {
+  background-color: var(--bg-sidebar) !important;
+}
+
+.bg-navbar {
+  background-color: var(--bg-navbar) !important;
+}
+
+/* Clases para texto */
+.text-brand-primary {
+  color: var(--brand-primary) !important;
+}
+
+.text-brand-secondary {
+  color: var(--brand-secondary) !important;
+}
+
+.text-muted-custom {
+  color: var(--text-muted) !important;
+}
+
+/* Bordes */
+.border-custom {
+  border-color: var(--border-color) !important;
+}
+
+/* Personalización del Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-primary);
+}
+
+/* Ocultar botón nativo de Mostrar Contraseña en MS Edge */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+/* Autocomplete de inputs en Chrome fondo oscuro */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px var(--bg-navbar) inset !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
