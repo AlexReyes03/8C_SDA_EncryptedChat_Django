@@ -84,11 +84,11 @@ export default function Sidebar() {
       <div className="h-100 w-100 p-3 bg-sidebar border-end border-custom d-flex flex-column">
 
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h6 className="text-white mb-0 fw-bold">Contactos y Grupos</h6>
+          <h6 className="text-white mb-0 fw-bold">Grupos</h6>
         </div>
 
         {/* Acciones de Grupo */}
-        <div className="d-flex gap-2 mb-4">
+        <div className="d-flex flex-column flex-xl-row gap-2 mb-4">
           <button
             className="btn btn-sm text-white w-100 d-flex align-items-center justify-content-center border-custom"
             style={{ backgroundColor: 'rgba(255,255,255,0.05)', transition: 'background-color 0.2s' }}
@@ -127,6 +127,7 @@ export default function Sidebar() {
                 <div
                   key={group.id}
                   onClick={() => handleGroupClick(group.id)}
+                  data-bs-dismiss="offcanvas"
                   className="d-flex align-items-center mb-2 p-2 rounded position-relative"
                   style={{
                     backgroundColor: activeGroupId === group.id ? '#7C148C' : 'rgba(255,255,255,0.05)',
@@ -183,7 +184,7 @@ export default function Sidebar() {
         <div className="mt-auto pt-3 border-top border-custom">
           <div className="d-flex align-items-center text-white-50 small mt-2">
             <i className="bi bi-circle-fill me-2" style={{ fontSize: '8px', color: '#28a745' }}></i>
-            Conectado de forma segura
+            Mensajes cifrados de Extremo a Extremo
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { authServices } from '../../api/auth-services';
 import logoMini from '../../assets/img/logo_mini.png';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import MenuIcon from '@mui/icons-material/Menu';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -15,12 +16,25 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="navbar navbar-expand-lg px-4 py-2 bg-sidebar border-bottom border-custom" style={{ minHeight: '65px', zIndex: 10 }}>
+    <nav className="navbar navbar-expand-lg py-2 bg-sidebar border-bottom border-custom" style={{ minHeight: '65px', zIndex: 10 }}>
       <div className="container-fluid">
-        {/* Brand / Logo */}
+        {/* Brand / Logo & Mobile Menu Toggle */}
         <div className="d-flex align-items-center">
-          <img src={logoMini} alt="Logo" className="me-2" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
-          <span className="navbar-brand mb-0 h1 text-brand-primary fw-bold text-white">
+          <button
+            className="btn btn-sm text-white d-md-none me-2 p-1 rounded-circle"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#mobileSidebar"
+            aria-controls="mobileSidebar"
+            aria-label="Abrir Menú"
+          >
+            <MenuIcon />
+          </button>
+          <img src={logoMini} alt="Logo" className="me-2 d-none d-sm-block" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+          <span className="navbar-brand mb-0 h1 text-brand-primary fw-bold text-white d-none d-sm-block">
+            EncryptedChat
+          </span>
+          <span className="navbar-brand mb-0 h1 text-brand-primary fw-bold text-white d-sm-none fs-5">
             EncryptedChat
           </span>
         </div>

@@ -43,7 +43,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     const websocket = new WebSocket(wsUrl);
 
     websocket.onopen = () => {
-      console.log('WebSocket Conectado exitosamente');
       setIsConnected(true);
       setMessages((prev) => [
         ...prev,
@@ -54,7 +53,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     websocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('WS Mensaje recibido:', data);
 
         // Si es un evento de bienvenida con historial (desde get_group_history)
         if (data.type === 'group_history' && data.messages) {
@@ -93,7 +91,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     };
 
     websocket.onclose = () => {
-      console.log('WebSocket Desconectado');
       setIsConnected(false);
       setMessages((prev) => [
         ...prev,
@@ -115,7 +112,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Escuchar si el grupo activo cambia para borrar el chat y pedir el nuevo historial
   useEffect(() => {
     if (ws && ws.readyState === WebSocket.OPEN && activeGroupId) {
-      console.log("Solicitando historial para grupo:", activeGroupId);
       ws.send(JSON.stringify({
         action: "get_group_history",
         group_id: activeGroupId
