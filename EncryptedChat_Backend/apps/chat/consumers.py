@@ -81,6 +81,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             return
 
+        # Debug: print encrypted payload as it arrives
+        print(
+            f"[EncryptedChat] Encrypted incoming message "
+            f"from_user={self.user.id} to_user={recipient_id}: {encrypted_content}"
+        )
+
         recipient = await self.get_user(recipient_id)
         if not recipient:
             await self.send(json.dumps({"error": "Recipient not found"}))
