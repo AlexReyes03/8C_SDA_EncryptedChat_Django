@@ -9,6 +9,7 @@ export interface ChatMessage {
   apodo?: string;
   message?: string;
   timestamp?: string;
+  isHistory?: boolean;
   [key: string]: unknown;
 }
 
@@ -32,7 +33,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
   useEffect(() => {
     // Al montar el Provider, intentamos conectar asumiendo que el usuario está logeado.
     const token = localStorage.getItem('access_token');
-    
+
     // Si no hay token, no intentamos conectar (útil para no estallar en layouts envueltos)
     if (!token) return;
 
@@ -45,7 +46,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
       console.log('WebSocket Conectado exitosamente');
       setIsConnected(true);
       setMessages((prev) => [
-        ...prev, 
+        ...prev,
         { id: Date.now().toString(), type: 'system', message: 'Conectado al servidor de mensajería cifrada' }
       ]);
     };
@@ -58,23 +59,24 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
         // Si es un evento de bienvenida con historial (desde get_group_history)
         if (data.type === 'group_history' && data.messages) {
           const mappedHistory = data.messages.map((m: any) => ({
-             ...m,
-             id: m.message_id || Date.now().toString(),
-             apodo: m.sender_username || 'Sistema',
-             message: m.encrypted_content || ''
+            ...m,
+            id: m.message_id || Date.now().toString(),
+            apodo: m.sender_username || 'Sistema',
+            message: m.encrypted_content || '',
+            isHistory: true
           }));
           setMessages(mappedHistory);
         } else if (data.type === 'incoming_message') {
-           // Asegurarnos de ignorar si el mensaje es de una sala diferente
-           setMessages((prev) => {
-             const appendMsg = { 
-               ...data, 
-               id: data.message_id || Date.now().toString(),
-               apodo: data.sender_username || 'Sistema',
-               message: data.encrypted_content || ''
-             };
-             return [...prev, appendMsg];
-           });
+          // Asegurarnos de ignorar si el mensaje es de una sala diferente
+          setMessages((prev) => {
+            const appendMsg = {
+              ...data,
+              id: data.message_id || Date.now().toString(),
+              apodo: data.sender_username || 'Sistema',
+              message: data.encrypted_content || ''
+            };
+            return [...prev, appendMsg];
+          });
         } else {
           // System o ack messages
           const appendMsg = { ...data, id: data.id || data.message_id || Date.now().toString() };
@@ -94,16 +96,16 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
       console.log('WebSocket Desconectado');
       setIsConnected(false);
       setMessages((prev) => [
-        ...prev, 
+        ...prev,
         { id: Date.now().toString(), type: 'system', message: 'Desconectado del servidor' }
       ]);
     };
 
     // Almacenamos asincrónicamente para que no desencadene cascada en el montaje de dependencias
     Promise.resolve().then(() => {
-        setWs(websocket);
+      setWs(websocket);
     });
-    
+
     // Cleanup al desmontar el Provider (Usuario hace logout o cierra la pestaña)
     return () => {
       websocket.close();
@@ -113,24 +115,24 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Escuchar si el grupo activo cambia para borrar el chat y pedir el nuevo historial
   useEffect(() => {
     if (ws && ws.readyState === WebSocket.OPEN && activeGroupId) {
-       console.log("Solicitando historial para grupo:", activeGroupId);
-       ws.send(JSON.stringify({
-          action: "get_group_history",
-          group_id: activeGroupId
-       }));
+      console.log("Solicitando historial para grupo:", activeGroupId);
+      ws.send(JSON.stringify({
+        action: "get_group_history",
+        group_id: activeGroupId
+      }));
     }
   }, [activeGroupId, ws]);
 
   const sendMessage = useCallback((messageContent: string) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       if (!activeGroupId) {
-         console.warn("No hay un grupo activo al cual enviar el mensaje");
-         return;
+        console.warn("No hay un grupo activo al cual enviar el mensaje");
+        return;
       }
       ws.send(JSON.stringify({
         action: 'send_message',
         recipient_id: null,
-        group_id: activeGroupId, 
+        group_id: activeGroupId,
         encrypted_content: messageContent
       }));
     } else {

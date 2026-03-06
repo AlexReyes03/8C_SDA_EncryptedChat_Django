@@ -258,6 +258,42 @@ class GroupRolesView(APIView):
         return Response(GroupMemberSerializer(target).data)
 
 
+class GroupMembersView(APIView):
+    """
+    GET: Get a list of group members.
+    Admins see 'accepted' and 'pending'. Normal members see only 'accepted'.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, pk):
+        group = Group.objects.filter(pk=pk).first()
+        if not group:
+            return Response({"detail": "Group not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        caller_membership = GroupMember.objects.filter(
+            group=group,
+            user=request.user,
+            status=GroupMember.Status.ACCEPTED,
+        ).first()
+
+        if not caller_membership:
+             return Response({"detail": "You are not a member of this group."}, status=status.HTTP_403_FORBIDDEN)
+
+        if caller_membership.role == GroupMember.Role.ADMIN:
+             members = GroupMember.objects.filter(
+                group=group,
+                status__in=[GroupMember.Status.ACCEPTED, GroupMember.Status.PENDING]
+             )
+        else:
+             members = GroupMember.objects.filter(
+                group=group,
+                status=GroupMember.Status.ACCEPTED
+             )
+        
+        serializer = GroupMemberSerializer(members, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class GroupRequestsView(APIView):
     """
     PUT: accept (or reject) pending join requests. Only group admins.

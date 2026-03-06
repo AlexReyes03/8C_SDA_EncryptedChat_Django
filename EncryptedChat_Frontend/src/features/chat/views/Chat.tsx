@@ -1,17 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SendIcon from '@mui/icons-material/Send';
-import AddIcon from '@mui/icons-material/Add';
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
 import GroupIcon from '@mui/icons-material/Group';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import { groupServices } from '../../../api/group-services';
 import type { GroupData } from '../../../components/layout/Sidebar';
+import SidebarAside from '../components/SidebarAside';
 
 export default function Chat() {
   const [inputMessage, setInputMessage] = useState('');
   const [activeGroupInfo, setActiveGroupInfo] = useState<GroupData | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isConnected, activeGroupId, sendMessage } = useWebSocket();
 
@@ -84,16 +85,22 @@ export default function Chat() {
             <h5 className="mb-0 text-white fw-bold">{activeGroupInfo ? activeGroupInfo.name : 'Cargando...'}</h5>
             <small className="text-white-50 d-flex align-items-center">
               <GroupIcon fontSize="inherit" className="me-1" />
-              {activeGroupInfo?.membership?.status === 'accepted' ? 'Miembro activo' : 'Cargando estado...'}
+              {activeGroupInfo ? `${activeGroupInfo.members_count || 0} Miembros` : 'Cargando estado...'}
             </small>
           </div>
         </div>
       </div>
 
+      <SidebarAside
+        show={showSidebar}
+        onClose={() => setShowSidebar(false)}
+        activeGroupInfo={activeGroupInfo}
+      />
+
       {/* Messages Area */}
       <div className="flex-grow-1 overflow-auto p-3 p-md-4 pt-4">
         <AnimatePresence>
-          {messages.map((msg: { id: string; type: string; apodo?: string; message?: string; timestamp?: string; }) => {
+          {messages.map((msg: { id: string; type: string; apodo?: string; message?: string; timestamp?: string; isHistory?: boolean; }) => {
             const isCurrentUser = msg.apodo === currentUser.apodo;
 
             if (msg.type === 'system') {
@@ -109,7 +116,8 @@ export default function Chat() {
               );
             }
 
-            if (msg.type === 'user_joined' || msg.type === 'user_left') {
+            if ((msg.type === 'user_joined' || msg.type === 'user_left')) {
+              if (msg.isHistory) return null; // Ignorar notificaciones de union/abandono pasadas que vienen al cargar historial
               return (
                 <motion.div
                   key={msg.id}

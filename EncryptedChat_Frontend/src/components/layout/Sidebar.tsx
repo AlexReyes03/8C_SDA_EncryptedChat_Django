@@ -18,18 +18,19 @@ export interface GroupData {
     role: 'admin' | 'member';
     status: 'pending' | 'accepted';
   };
+  members_count?: number;
 }
 
 export default function Sidebar() {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  
+
   // Settings Modal State
   const [selectedGroupForSettings, setSelectedGroupForSettings] = useState<GroupData | null>(null);
 
   const [groups, setGroups] = useState<GroupData[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
-  
+
   const { activeGroupId, setActiveGroupId, setMessages } = useWebSocket();
 
   const loadGroups = useCallback(async () => {
@@ -54,7 +55,7 @@ export default function Sidebar() {
     setShowCreate(false);
     setShowJoin(false);
     setSelectedGroupForSettings(null);
-    
+
     try {
       // Recargar grupos y auto-seleccionar el último si es un modal de creación (esto asume que el backend los ordena, 
       // o buscamos el último ID. Por simplicidad solo refrescamos la lista).
@@ -68,25 +69,25 @@ export default function Sidebar() {
 
   const handleGroupClick = (id: number) => {
     if (activeGroupId === id) {
-       setActiveGroupId(null);
-       setMessages([]);
+      setActiveGroupId(null);
+      setMessages([]);
     } else {
-       setMessages([]); // Limpiar mensajes mientras carga el historial nuevo
-       setActiveGroupId(id);
+      setMessages([]); // Limpiar mensajes mientras carga el historial nuevo
+      setActiveGroupId(id);
     }
   };
 
   return (
     <>
       <div className="h-100 w-100 p-3 bg-sidebar border-end border-custom d-flex flex-column">
-        
+
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h6 className="text-white mb-0 fw-bold">Contactos y Grupos</h6>
         </div>
 
         {/* Acciones de Grupo */}
         <div className="d-flex gap-2 mb-4">
-          <button 
+          <button
             className="btn btn-sm text-white w-100 d-flex align-items-center justify-content-center border-custom"
             style={{ backgroundColor: 'rgba(255,255,255,0.05)', transition: 'background-color 0.2s' }}
             onClick={() => setShowJoin(true)}
@@ -94,8 +95,8 @@ export default function Sidebar() {
             <GroupIcon fontSize="small" className="me-2 text-brand-secondary" />
             Unirse
           </button>
-          
-          <button 
+
+          <button
             className="btn btn-sm text-white w-100 d-flex align-items-center justify-content-center"
             style={{ backgroundColor: 'var(--brand-primary)', transition: 'opacity 0.2s' }}
             onClick={() => setShowCreate(true)}
@@ -104,10 +105,10 @@ export default function Sidebar() {
             Crear
           </button>
         </div>
-        
+
         {/* Lista Dinámica de Grupos */}
         <div className="flex-grow-1 overflow-auto pe-2" style={{ cssText: "::-webkit-scrollbar { width: '4px' }" } as React.CSSProperties}>
-          
+
           {isLoadingGroups ? (
             <div className="text-center text-muted-custom mt-4 small">
               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -121,19 +122,19 @@ export default function Sidebar() {
             groups.map((group) => {
               const isAdmin = group.membership?.role === 'admin';
               return (
-              <div 
-                key={group.id} 
-                onClick={() => handleGroupClick(group.id)}
-                className="d-flex align-items-center mb-2 p-2 rounded position-relative" 
-                style={{ 
-                   backgroundColor: activeGroupId === group.id ? '#7C148C' : 'rgba(255,255,255,0.05)', 
-                   cursor: 'pointer', 
-                   transition: 'background-color 0.2s',
-                   boxShadow: activeGroupId === group.id ? '0 0 10px rgba(124, 20, 140, 0.5)' : 'none'
-                }}
-                onMouseEnter={(e) => { if(activeGroupId !== group.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)' }}
-                onMouseLeave={(e) => { if(activeGroupId !== group.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)' }}
-              >
+                <div
+                  key={group.id}
+                  onClick={() => handleGroupClick(group.id)}
+                  className="d-flex align-items-center mb-2 p-2 rounded position-relative"
+                  style={{
+                    backgroundColor: activeGroupId === group.id ? '#7C148C' : 'rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    boxShadow: activeGroupId === group.id ? '0 0 10px rgba(124, 20, 140, 0.5)' : 'none'
+                  }}
+                  onMouseEnter={(e) => { if (activeGroupId !== group.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)' }}
+                  onMouseLeave={(e) => { if (activeGroupId !== group.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)' }}
+                >
                   <div
                     className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
                     style={{
@@ -148,31 +149,31 @@ export default function Sidebar() {
                     {group.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="d-flex w-100 justify-content-between align-items-center">
-                     <div className="d-flex align-items-center">
-                        <h6 className="mb-0 text-white fw-medium text-truncate" style={{ maxWidth: '120px' }}>
-                          {group.name}
-                        </h6>
-                        {isAdmin && (
-                          <StarIcon fontSize="small" className="ms-2 text-white" titleAccess="Administrador" />
-                        )}
-                     </div>
-                     
-                     <div className="d-flex align-items-center">
-                           <button 
-                             className="btn btn-sm text-secondary p-1" 
-                             onClick={(e) => { e.stopPropagation(); setSelectedGroupForSettings(group); }}
-                             title={isAdmin ? "Configuración de Grupo" : "Detalles del Grupo"}
-                           >
-                             <MoreVertIcon fontSize="small" />
-                           </button>
-                     </div>
+                    <div className="d-flex align-items-center">
+                      <h6 className="mb-0 text-white fw-medium text-truncate" style={{ maxWidth: '120px' }}>
+                        {group.name}
+                      </h6>
+                      {isAdmin && (
+                        <StarIcon fontSize="small" className="ms-2 text-white" titleAccess="Administrador" />
+                      )}
+                    </div>
+
+                    <div className="d-flex align-items-center">
+                      <button
+                        className="btn btn-sm text-secondary p-1"
+                        onClick={(e) => { e.stopPropagation(); setSelectedGroupForSettings(group); }}
+                        title={isAdmin ? "Configuración de Grupo" : "Detalles del Grupo"}
+                      >
+                        <MoreVertIcon fontSize="small" />
+                      </button>
+                    </div>
                   </div>
-              </div>
-            );
-          })
+                </div>
+              );
+            })
           )}
         </div>
-        
+
         {/* Botón flotante o acción inferior para el Sidebar */}
         <div className="mt-auto pt-3 border-top border-custom">
           <div className="d-flex align-items-center text-white-50 small mt-2">
@@ -184,10 +185,10 @@ export default function Sidebar() {
 
       <CreateGroupModal show={showCreate} onClose={handleModalClose} />
       <JoinGroupModal show={showJoin} onClose={handleModalClose} />
-      <GroupSettingsModal 
-        show={selectedGroupForSettings !== null} 
-        onClose={handleModalClose} 
-        group={selectedGroupForSettings} 
+      <GroupSettingsModal
+        show={selectedGroupForSettings !== null}
+        onClose={handleModalClose}
+        group={selectedGroupForSettings}
       />
     </>
   );
