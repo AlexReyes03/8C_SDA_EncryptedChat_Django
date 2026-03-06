@@ -16,7 +16,7 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
     max_participants: 50,
     is_private: false
   });
-  
+
   const { setActiveGroupId } = useWebSocket();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -40,12 +40,12 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
     try {
       const response = await groupServices.createGroup(formData);
       setSuccessMsg('¡Grupo creado exitosamente!');
-      
+
       // Select the active group id right away
       if (response && response.id) {
-          setActiveGroupId(response.id);
+        setActiveGroupId(response.id);
       }
-      
+
       // Reset form for next time
       setTimeout(() => {
         onClose();
@@ -76,11 +76,11 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
             style={{ zIndex: 1040 }}
             onClick={onClose}
           />
-          
+
           {/* Modal Container */}
           <div className="modal fade show d-block" tabIndex={-1} style={{ zIndex: 1050 }}>
             <div className="modal-dialog modal-dialog-centered">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
@@ -96,10 +96,10 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                     <CloseIcon />
                   </button>
                 </div>
-                
+
                 <form onSubmit={handleCreate}>
                   <div className="modal-body text-white">
-                    
+
                     <AnimatePresence>
                       {successMsg && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2 mb-3 fw-medium text-dark" role="alert" style={{ backgroundColor: '#198754', color: '#fff' }}>
@@ -118,80 +118,80 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
 
                     <fieldset disabled={isLoading || successMsg !== ''}>
                       <div className="mb-3">
-                      <label htmlFor="groupName" className="form-label text-white-50 small">Nombre del Grupo</label>
-                      <input 
-                        type="text" 
-                        className="form-control bg-sidebar border-custom text-white shadow-none" 
-                        id="groupName" 
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                        placeholder="Ej. Proyecto Alpha"
-                        autoComplete="off"
-                      />
-                    </div>
-                    
-                    <div className="mb-3">
-                      <label htmlFor="maxParticipants" className="form-label text-white-50 small">Límite de Participantes</label>
-                      <input 
-                        type="number" 
-                        className="form-control bg-sidebar border-custom text-white shadow-none" 
-                        id="maxParticipants" 
-                        name="max_participants"
-                        min="2"
-                        value={formData.max_participants}
-                        onChange={handleChange}
-                        required
-                        autoComplete="off"
-                      />
-                    </div>
-                    
-                    <div className="mb-3">
-                      <label className="form-label text-white-50 small d-block">Privacidad del Grupo</label>
-                      
-                      <div className="form-check mb-2">
-                        <input 
-                          className="form-check-input" 
-                          type="radio" 
-                          name="is_private" 
-                          id="publicRadio" 
-                          checked={!formData.is_private}
-                          onChange={() => setFormData({ ...formData, is_private: false })}
+                        <label htmlFor="groupName" className="form-label text-white fw-semibold small mb-2">Nombre del Grupo</label>
+                        <input
+                          type="text"
+                          className="form-control bg-sidebar border-custom text-white shadow-none"
+                          id="groupName"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          required
+                          placeholder="Ej. Proyecto Alpha"
+                          autoComplete="off"
                         />
-                        <label className="form-check-label text-white small" htmlFor="publicRadio">
-                          <strong>Público:</strong> Cualquiera con el código o enlace puede unirse automáticamente.
-                        </label>
                       </div>
-                      
-                      <div className="form-check">
-                        <input 
-                          className="form-check-input" 
-                          type="radio" 
-                          name="is_private" 
-                          id="privateRadio" 
-                          checked={formData.is_private}
-                          onChange={() => setFormData({ ...formData, is_private: true })}
+
+                      <div className="mb-3">
+                        <label htmlFor="maxParticipants" className="form-label text-white fw-semibold small mb-2">Límite de Participantes</label>
+                        <input
+                          type="number"
+                          className="form-control bg-sidebar border-custom text-white shadow-none"
+                          id="maxParticipants"
+                          name="max_participants"
+                          min="2"
+                          value={formData.max_participants}
+                          onChange={handleChange}
+                          required
+                          autoComplete="off"
                         />
-                        <label className="form-check-label text-white small" htmlFor="privateRadio">
-                          <strong>Privado:</strong> Los usuarios solicitan acceso y deben ser aceptados por el Administrador.
-                        </label>
                       </div>
-                    </div>
-                    
-                    <div className="alert alert-info bg-brand-primary border-0 text-white small mb-0 mt-4 rounded-3 d-flex align-items-center" role="alert" style={{ '--bs-bg-opacity': .2 } as React.CSSProperties}>
-                      <i className="bi bi-info-circle me-2"></i>
-                      Se te asignará automáticamente el rol de Administrador. Podrás transferirlo más adelante.
-                    </div>
+
+                      <div className="mb-3">
+                        <label className="form-label text-white fw-semibold small d-block mb-2">Privacidad del Grupo</label>
+
+                        <div className="form-check mb-2">
+                          <input
+                            className="form-check-input"
+                            type="radio"
+                            name="is_private"
+                            id="publicRadio"
+                            checked={!formData.is_private}
+                            onChange={() => setFormData({ ...formData, is_private: false })}
+                          />
+                          <label className="form-check-label text-white small" htmlFor="publicRadio">
+                            <strong>Público:</strong> Cualquiera con el código o enlace puede unirse automáticamente.
+                          </label>
+                        </div>
+
+                        <div className="form-check">
+                          <input
+                            className="form-check-input"
+                            type="radio"
+                            name="is_private"
+                            id="privateRadio"
+                            checked={formData.is_private}
+                            onChange={() => setFormData({ ...formData, is_private: true })}
+                          />
+                          <label className="form-check-label text-white small" htmlFor="privateRadio">
+                            <strong>Privado:</strong> Los usuarios solicitan acceso y deben ser aceptados por el Administrador.
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="alert alert-info bg-brand-primary border-0 text-dark small mb-0 mt-4 rounded-3 d-flex align-items-center" role="alert" style={{ '--bs-bg-opacity': .2 } as React.CSSProperties}>
+                        <i className="bi bi-info-circle me-2"></i>
+                        Se te asignará automáticamente el rol de Administrador. Podrás transferirlo más adelante.
+                      </div>
                     </fieldset>
                   </div>
-                  
+
                   <div className="modal-footer border-top border-custom">
                     <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={isLoading}>
                       Cancelar
                     </button>
                     <button type="submit" disabled={isLoading || successMsg !== ''} className="btn btn-brand-primary text-white fw-bold" style={{ backgroundColor: 'var(--brand-primary)', minWidth: '150px' }}>
-                       {isLoading ? (
+                      {isLoading ? (
                         <>
                           <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                           Creando...

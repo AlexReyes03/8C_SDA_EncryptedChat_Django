@@ -24,13 +24,13 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
     try {
       const response = await groupServices.joinGroup(inviteCode.trim().toUpperCase());
       const isPending = response.membership?.status === 'pending';
-      
+
       setSuccessMsg(
-        isPending 
-          ? 'Solicitud enviada. Debes esperar la aprobación del administrador.' 
+        isPending
+          ? 'Solicitud enviada. Debes esperar la aprobación del administrador.'
           : `¡Te has unido exitosamente al grupo ${response.name || 'solicitado'}!`
       );
-      
+
       setTimeout(() => {
         onClose();
         setInviteCode('');
@@ -59,10 +59,10 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
             style={{ zIndex: 1040 }}
             onClick={onClose}
           />
-          
+
           <div className="modal fade show d-block" tabIndex={-1} style={{ zIndex: 1050 }}>
             <div className="modal-dialog modal-dialog-centered">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
@@ -78,7 +78,7 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                     <CloseIcon />
                   </button>
                 </div>
-                
+
                 <form onSubmit={handleJoin}>
                   <div className="modal-body text-white">
 
@@ -97,28 +97,28 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    
+
                     <fieldset disabled={isLoading || successMsg !== ''}>
                       <div className="mb-3">
-                      <label htmlFor="inviteCode" className="form-label text-white-50 small">Código de Invitación</label>
-                      <input 
-                        type="text" 
-                        className="form-control text-center bg-sidebar border-custom text-white shadow-none fs-4 fw-bold letter-spacing-1" 
-                        id="inviteCode" 
-                        value={inviteCode}
-                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                        required
-                        placeholder="XXXX-1234"
-                        style={{ letterSpacing: '2px' }}
-                        autoComplete="off"
-                      />
-                      <div className="form-text text-muted small mt-2">
-                        Ingresa el código que te proporcionó el administrador del grupo. Si el grupo es privado, tu solicitud quedará en espera de aprobación.
+                        <label htmlFor="inviteCode" className="form-label text-white fw-semibold small mb-2">Código de Invitación</label>
+                        <input
+                          type="text"
+                          className="form-control text-center bg-sidebar border-custom text-white shadow-none fs-4 fw-bold letter-spacing-1"
+                          id="inviteCode"
+                          value={inviteCode}
+                          onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                          required
+                          placeholder="XXXX-1234"
+                          style={{ letterSpacing: '2px' }}
+                          autoComplete="off"
+                        />
+                        <div className="form-text text-white-50 small mt-2">
+                          Ingresa el código que te proporcionó el administrador del grupo. Si el grupo es privado, tu solicitud quedará en espera de aprobación.
+                        </div>
                       </div>
-                    </div>
                     </fieldset>
                   </div>
-                  
+
                   <div className="modal-footer border-top border-custom">
                     <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={isLoading}>
                       Cancelar
