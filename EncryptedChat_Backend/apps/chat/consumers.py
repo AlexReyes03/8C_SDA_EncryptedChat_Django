@@ -84,6 +84,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 json.dumps({"error": "Missing group_id or encrypted_content"})
             )
             return
+            
+        print(f"[WebSocket] Mensaje cifrado entrante de '{self.user.username}' para grupo ID {group_id}...")
+        print(f"            E2EE Payload: {encrypted_content}\n")
 
         room = await self.get_room_from_group(group_id, self.user)
         if not room:

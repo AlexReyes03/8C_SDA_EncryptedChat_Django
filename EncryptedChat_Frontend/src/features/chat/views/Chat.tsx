@@ -34,8 +34,8 @@ export default function Chat() {
         try {
           const data = await groupServices.getGroupInfo(activeGroupId);
           setActiveGroupInfo(data);
-        } catch (e) {
-          console.error("No se pudo obtener info del grupo", e);
+        } catch {
+          // Failure silently omitted
         }
       } else {
         setActiveGroupInfo(null);
