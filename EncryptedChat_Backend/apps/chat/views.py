@@ -50,13 +50,26 @@ class GroupListCreateView(generics.ListCreateAPIView):
                 is_private=serializer.validated_data["is_private"],
                 room=room,
             )
+            
+            if not group.is_private:
+                raw_aes = serializer.validated_data.get("raw_aes_key")
+                if raw_aes:
+                    from cryptography.fernet import Fernet
+                    import base64, hashlib
+                    from django.conf import settings
+                    digest = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
+                    f = Fernet(base64.urlsafe_b64encode(digest))
+                    group.server_encrypted_aes_key = f.encrypt(raw_aes.encode()).decode()
+                    group.save(update_fields=["server_encrypted_aes_key"])
+
             GroupMember.objects.create(
                 group=group,
                 user=request.user,
                 role=GroupMember.Role.ADMIN,
                 status=GroupMember.Status.ACCEPTED,
+                encrypted_symmetric_key=serializer.validated_data["encrypted_symmetric_key"]
             )
-        out_serializer = GroupSerializer(group)
+        out_serializer = GroupSerializer(group, context={'request': request})
         return Response(out_serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -87,14 +100,48 @@ class GroupJoinView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        membership, created = GroupMember.objects.get_or_create(
-            group=group,
-            user=request.user,
-            defaults={
-                "role": GroupMember.Role.MEMBER,
-                "status": GroupMember.Status.ACCEPTED if not group.is_private else GroupMember.Status.PENDING,
-            },
-        )
+        if group.is_private:
+            membership, created = GroupMember.objects.get_or_create(
+                group=group,
+                user=request.user,
+                defaults={
+                    "role": GroupMember.Role.MEMBER,
+                    "status": GroupMember.Status.PENDING,
+                },
+            )
+        else:
+            from apps.security.models import PublicKey
+            from cryptography.hazmat.primitives.asymmetric import padding
+            from cryptography.hazmat.primitives import serialization
+            import base64, hashlib
+            from cryptography.fernet import Fernet
+            from django.conf import settings
+
+            enc_for_user = ""
+            if group.server_encrypted_aes_key:
+                try:
+                    digest = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
+                    f = Fernet(base64.urlsafe_b64encode(digest))
+                    raw_aes_key = f.decrypt(group.server_encrypted_aes_key.encode()).decode()
+
+                    user_pub = PublicKey.objects.filter(user=request.user).first()
+                    if user_pub:
+                        pub_obj = serialization.load_pem_public_key(user_pub.key_data.encode())
+                        enc = pub_obj.encrypt(raw_aes_key.encode(), padding.PKCS1v15())
+                        enc_for_user = base64.b64encode(enc).decode()
+                except Exception:
+                    pass
+
+            membership, created = GroupMember.objects.get_or_create(
+                group=group,
+                user=request.user,
+                defaults={
+                    "role": GroupMember.Role.MEMBER,
+                    "status": GroupMember.Status.ACCEPTED,
+                    "encrypted_symmetric_key": enc_for_user
+                },
+            )
+
         if not created:
             return Response(
                 {"detail": "You are already a member or have a pending request."},
@@ -342,8 +389,17 @@ class GroupRequestsView(APIView):
                     {"detail": "Group is full. Cannot accept more members."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+                
+            encrypted_symmetric_key = serializer.validated_data.get("encrypted_symmetric_key")
+            if not encrypted_symmetric_key:
+                 return Response(
+                    {"detail": "encrypted_symmetric_key is absolutely required to accept a user for E2EE."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+                
             target.status = GroupMember.Status.ACCEPTED
-            target.save(update_fields=["status"])
+            target.encrypted_symmetric_key = encrypted_symmetric_key
+            target.save(update_fields=["status", "encrypted_symmetric_key"])
             return Response(GroupMemberSerializer(target).data)
         else:
             target.delete()

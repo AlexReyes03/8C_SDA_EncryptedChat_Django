@@ -16,6 +16,7 @@ class Group(models.Model):
     invite_code = models.CharField(max_length=32, unique=True, db_index=True)
     max_participants = models.IntegerField(default=50)
     is_private = models.BooleanField(default=False)
+    server_encrypted_aes_key = models.TextField(null=True, blank=True)
     room = models.OneToOneField(
         "Room",
         on_delete=models.CASCADE,
@@ -59,6 +60,10 @@ class GroupMember(models.Model):
     )
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    
+    # Store the group's symmetric AES key, encrypted with this user's public RSA key.
+    encrypted_symmetric_key = models.TextField(null=True, blank=True)
+    
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -13,7 +13,7 @@ class GroupMemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GroupMember
-        fields = ("id", "user_id", "username", "role", "status", "joined_at")
+        fields = ("id", "user_id", "username", "role", "status", "encrypted_symmetric_key", "joined_at")
         read_only_fields = ("id", "joined_at")
 
 
@@ -64,9 +64,12 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class GroupCreateSerializer(serializers.ModelSerializer):
+    encrypted_symmetric_key = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    raw_aes_key = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
     class Meta:
         model = Group
-        fields = ("name", "max_participants", "is_private")
+        fields = ("name", "max_participants", "is_private", "encrypted_symmetric_key", "raw_aes_key")
 
     def validate_max_participants(self, value):
         if value < 2 or value > 500:
@@ -89,3 +92,4 @@ class GroupRolesSerializer(serializers.Serializer):
 class GroupRequestsSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     accept = serializers.BooleanField()
+    encrypted_symmetric_key = serializers.CharField(required=False, allow_blank=True)
