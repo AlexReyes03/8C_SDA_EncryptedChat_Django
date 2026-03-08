@@ -95,7 +95,7 @@ DB_HOST=localhost
 DB_PORT=3306
 ```
 
-> Asegúrate de configurar los valores correctos de tu conexión local en el archivo `.env`.
+> Asegúrate de configurar los valores correctos de tu conexión local en el archivo `.env`, créalo a partir del `.env.example`.
 
 ### 2.5 Aplicar migraciones
 
@@ -127,6 +127,8 @@ npm install
 | Bootstrap 5 | Sistema de grillas y estilos base |
 | MUI / Material Icons | Iconografía |
 | Motion | Animaciones |
+| CryptoJS | Algoritmo AES simétrico y PBKDF2 |
+| JSEncrypt | Algoritmo incrustado RSA asimétrico |
 
 ---
 
