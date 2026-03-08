@@ -1,10 +1,3 @@
-// En Vite, las variables de entorno se acceden a través de import.meta.env y deben empezar con VITE_
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-
-if (!API_BASE_URL) {
-    console.error("VITE_API_URL no está definido en el archivo .env");
-}
-
 export const fetchWrapper = {
     get: request('GET'),
     post: request('POST'),
@@ -13,11 +6,25 @@ export const fetchWrapper = {
 };
 
 function request(method: string) {
-    return async (url: string, body?: unknown, customHeaders?: Record<string, string>) => {
-        const fullUrl = `${API_BASE_URL}${url}`;
-        
+    return async (urlPath: string, body?: unknown, customHeaders?: Record<string, string>) => {
+        let baseURL = import.meta.env.VITE_API_URL || '';
+        if (baseURL.endsWith('/')) {
+            baseURL = baseURL.slice(0, -1);
+        }
+
+        let cleanPath = urlPath;
+        if (!cleanPath.startsWith('/')) {
+            cleanPath = '/' + cleanPath;
+        }
+        if (!cleanPath.endsWith('/')) {
+            cleanPath = cleanPath + '/'; // Obligatorio para Django REST Framework
+        }
+
+        const fullUrl = `${baseURL}${cleanPath}`;
+
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true', // Omitir página HTML de advertencia del túnel Ngrok gratuito
             ...customHeaders
         };
 
@@ -30,18 +37,13 @@ function request(method: string) {
             method,
             headers
         };
-        
+
         if (body) {
             requestOptions.body = JSON.stringify(body);
         }
 
-        try {
-            const response = await fetch(fullUrl, requestOptions);
-            return handleResponse(response);
-        } catch (error) {
-            console.error(`Fetch error on ${method} ${fullUrl}:`, error);
-            throw error;
-        }
+        const response = await fetch(fullUrl, requestOptions);
+        return handleResponse(response);
     };
 }
 
@@ -58,7 +60,7 @@ async function handleResponse(response: Response) {
         }
         throw new Error('El servidor retornó una respuesta inválida (No-JSON).');
     }
-    
+
     if (!response.ok) {
         if ([401, 403].includes(response.status)) {
             // Eliminar token si es inválido
@@ -66,8 +68,14 @@ async function handleResponse(response: Response) {
             localStorage.removeItem('refresh_token');
         }
 
-        const error = (data && data.detail) || (data && data.message) || response.statusText;
-        throw new Error(error);
+        let errorMsg = response.statusText;
+        if (data && typeof data === 'object') {
+            if (data.detail) errorMsg = data.detail;
+            else if (data.message) errorMsg = data.message;
+            else errorMsg = JSON.stringify(data);
+        }
+
+        throw new Error(errorMsg);
     }
 
     return data;

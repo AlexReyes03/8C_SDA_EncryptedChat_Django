@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import os
 import environ
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -71,6 +72,9 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "ngrok-skip-browser-warning",
+]
 # CORS_ALLOWED_ORIGINS = [ "http://localhost:5173", ]
 
 ROOT_URLCONF = "EncryptedChat_Backend.urls"
@@ -168,8 +172,8 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_THROTTLE_RATES": {
-        "login": "5/min",
-        "register": "3/hour",
+        "login": "10/min",
+        "register": "10/min",
     },
 }
 

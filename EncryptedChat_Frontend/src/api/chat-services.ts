@@ -12,10 +12,22 @@ export const chatServices = {
     
     // Configuración para la URL base del WebSocket
     getWebSocketURL: () => {
-        const url = import.meta.env.VITE_WS_URL;
+        let url = import.meta.env.VITE_WS_URL || '';
+        
         if (!url) {
             console.error("VITE_WS_URL no está definido en el archivo .env");
+            return '';
         }
+
+        // Auto-corregir protocolos mal formados por variables de entorno
+        url = url.replace(/^(ws:https:\/\/|wss:https:\/\/|https:\/\/)/, 'wss://');
+        url = url.replace(/^(http:\/\/|ws:http:\/\/)/, 'ws://');
+
+        // Forzar WSS (Seguridad) si la página actual está HTTPS (Previene Mixed Content)
+        if (window.location.protocol === 'https:' && url.startsWith('ws://')) {
+            url = url.replace('ws://', 'wss://');
+        }
+
         return url;
     }
 };
