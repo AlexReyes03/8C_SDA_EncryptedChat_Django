@@ -17,8 +17,13 @@ export const authServices = {
     },
 
     logout: () => {
+        const username = localStorage.getItem('username');
+        if (username) {
+            localStorage.removeItem(`enc_chat_pk_${username}`);
+        }
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('username');
     },
 
     isAuthenticated: () => {

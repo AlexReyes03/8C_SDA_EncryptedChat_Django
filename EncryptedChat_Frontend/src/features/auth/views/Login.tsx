@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { authServices } from '../../../api/auth-services';
+import { securityServices } from '../../../api/security-services';
+import { CHAT_CRYPTO } from '../../../utils/crypto';
 import Logo from '../../../assets/img/logo_mini.png';
 
 export default function Login() {
@@ -45,14 +47,28 @@ export default function Login() {
     setSuccessMsg('');
     setIsLoading(true);
 
+    // Evita congelar el navegador: Cede control al hilo de JS para poder mostrar el efecto "Loading"
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
     try {
       if (isRegistering) {
+        // Generar par de llaves RSA para el nuevo usuario
+        const rsaKeys = CHAT_CRYPTO.generateRSAKeys();
+        
+        // Cifrar llave privada local usando la contraseña como llave simétrica AES
+        let encPrivKey = "";
+        if (rsaKeys.privateKey) {
+            encPrivKey = CHAT_CRYPTO.encryptPrivateKey(rsaKeys.privateKey, password);
+            CHAT_CRYPTO.saveMyPrivateKey(username, rsaKeys.privateKey);
+        }
+
         // Llamada al endpoint de registro
         await authServices.register({
           username,
           email,
           password,
-          public_key: "Esto se va a enviar desde el front de React"
+          public_key: rsaKeys.publicKey || '',
+          encrypted_private_key: encPrivKey
         });
 
         // Si el registro es exitoso, volvemos a mostrar el formulario de login limpiando contraseña
@@ -67,12 +83,73 @@ export default function Login() {
         localStorage.setItem('refresh_token', response.refresh);
         localStorage.setItem('username', username);
 
+        // Verificar o reponer llaves RSA
+        const privKey = CHAT_CRYPTO.getMyPrivateKey(username);
+        if (!privKey) {
+          // Browser nuevo, limpiado, o dispositivo móvil
+          try {
+            const vaultResp = await securityServices.getMyKeys();
+            if (vaultResp && vaultResp.encrypted_private_key) {
+               // Intentar descifrar la bóveda
+               const recoveredKey = CHAT_CRYPTO.decryptPrivateKey(vaultResp.encrypted_private_key, password);
+                if (recoveredKey && recoveredKey.includes("PRIVATE KEY")) {
+                  CHAT_CRYPTO.saveMyPrivateKey(username, recoveredKey);
+                } else {
+                  // Contraseña de recuperación falló o formato inválido localmente
+                  throw new Error("Local decryption vault failed");
+                }
+             } else {
+                throw new Error("No vault found on server");
+             }
+          } catch {
+             // NO generar ni sobreescribir llaves de forma silenciosa.
+             // Causaba desincronización y pérdida total de grupos por fallos temporales de red.
+             // Obligamos al usuario a re-intentar para no corromper su estado en el Backend.
+             throw new Error("Error E2EE: No se pudo descargar tu Bóveda de Llaves por un fallo de conexión o la cuenta está corrupta. Intenta nuevamente.");
+          }
+        } else {
+           // Retrocompatibilidad: Si la llave existe localmente pero el usuario fue creado antes de PBKDF2 Vault
+           // (o si cambió su contraseña), resubir la bóveda cifrada en el fondo de forma silenciosa.
+           try {
+               const rsaPublicKey = CHAT_CRYPTO.getPublicKeyFromPrivate(username);
+               if (rsaPublicKey) {
+                   const encPrivKey = CHAT_CRYPTO.encryptPrivateKey(privKey, password);
+                   securityServices.uploadKeys(rsaPublicKey, encPrivKey).catch(() => {});
+               }
+           } catch (e) {
+               console.error("No se pudo respaldar la bóveda en 2do plano:", e);
+           }
+        }
+
         // Redirigir al chat
         navigate('/chat', { replace: true });
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage || `Error al ${isRegistering ? 'registrar la cuenta' : 'iniciar sesión'}. Verifica tus datos.`);
+      const errorMessage = err instanceof Error ? err.message : 'Ocurrió un error inesperado.';
+      const lowerMsg = errorMessage.toLowerCase();
+      let mappedError = errorMessage;
+
+      if (lowerMsg.includes('credenciales') || lowerMsg.includes('no active account') || lowerMsg.includes('invalid') || lowerMsg.includes('incorrect') || lowerMsg.includes('bad request')) {
+        mappedError = 'Error credenciales incorrectas';
+      } else if (lowerMsg.includes('not found') || lowerMsg.includes('no encontrado')) {
+        mappedError = 'Error usuario no encontrado';
+      } else if (lowerMsg.includes('email') && (lowerMsg.includes('exists') || lowerMsg.includes('registrado') || lowerMsg.includes('already') || lowerMsg.includes('ya existe'))) {
+        mappedError = 'Error este correo ya está registrado';
+      } else if (lowerMsg.includes('username') && (lowerMsg.includes('exists') || lowerMsg.includes('registrado') || lowerMsg.includes('already') || lowerMsg.includes('ya existe'))) {
+        mappedError = 'Error este usuario ya está registrado';
+      } else if (lowerMsg.includes('username') && lowerMsg.includes('150')) {
+        mappedError = 'El nombre de usuario no puede tener más de 150 caracteres';
+      } else if (lowerMsg.includes('username') && (lowerMsg.includes('válido') || lowerMsg.includes('valid'))) {
+        mappedError = 'El nombre de usuario contiene caracteres no permitidos';
+      } else if (lowerMsg.includes('password') && (lowerMsg.includes('short') || lowerMsg.includes('common') || lowerMsg.includes('insegura') || lowerMsg.includes('al menos 8') || lowerMsg.includes('caracteres'))) {
+        mappedError = 'Tu contraseña no es segura. Prueba una contraseña de 8 dígitos con al menos una letra mayúscula';
+      } else if (lowerMsg.includes('failed to fetch') || lowerMsg.includes('network') || lowerMsg.includes('500') || lowerMsg.includes('conexión') || lowerMsg.includes('servidor')) {
+        mappedError = 'Error en la conexión con el servidor';
+      } else {
+        mappedError = errorMessage || `Error al ${isRegistering ? 'registrar la cuenta' : 'iniciar sesión'}. Verifica tus datos.`;
+      }
+
+      setError(mappedError);
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +204,7 @@ export default function Login() {
               className="card shadow-lg border-0 bg-sidebar text-primary rounded-4"
             >
               <div className="card-body p-4 p-md-5">
-                <h2 className="text-center mb-2 text-brand-primary fw-bold">
+                <h2 className="text-center mb-2 text-brand-secondary fw-bold">
                   {isRegistering ? 'Crear Cuenta' : '¡Bienvenido!'}
                 </h2>
                 <p className="text-center mb-4 text-muted-custom">
@@ -138,20 +215,15 @@ export default function Login() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="alert alert-success alert-dismissible fade show"
+                    className="custom-alert-success fade show small py-2 px-3 mb-3 fw-medium rounded d-flex justify-content-between align-items-center shadow-sm"
                     role="alert"
                   >
-                    {successMsg}
-                    <button
-                      type="button"
-                      className="btn-close btn-close-white"
-                      onClick={() => setSuccessMsg('')}
-                    ></button>
+                    <div><strong className="text-white me-1">¡Listo!</strong> <span className="text-white">{successMsg}</span></div>
                   </motion.div>
                 )}
 
                 {error && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 fw-medium text-dark" role="alert" style={{ backgroundColor: '#dc3545', color: '#fff' }}>
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="custom-alert-danger fade show small py-2 px-3 mb-3 fw-medium rounded d-flex justify-content-between align-items-center shadow-sm" role="alert">
                     <span className="text-white">{error}</span>
                   </motion.div>
                 )}
@@ -160,9 +232,9 @@ export default function Login() {
                   <div className="form-floating mb-3">
                     <input
                       type="text"
-                      className="form-control bg-navbar text-primary border-custom"
+                      className="form-control bg-navbar text-white border-custom"
                       id="username"
-                      placeholder="Usuario"
+                      placeholder=""
                       value={username}
                       onChange={(e) => {
                         setUsername(e.target.value);
@@ -188,9 +260,9 @@ export default function Login() {
                       >
                         <input
                           type="email"
-                          className="form-control bg-navbar text-primary border-custom"
+                          className="form-control bg-navbar text-white border-custom"
                           id="email"
-                          placeholder="Correo electrónico"
+                          placeholder=""
                           value={email}
                           onChange={(e) => {
                             setEmail(e.target.value);
@@ -210,9 +282,9 @@ export default function Login() {
                   <div className="form-floating mb-4 position-relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      className="form-control bg-navbar text-primary border-custom pe-5"
+                      className="form-control bg-navbar text-white border-custom pe-5"
                       id="password"
-                      placeholder="Contraseña"
+                      placeholder=""
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value);
@@ -227,7 +299,7 @@ export default function Login() {
                     </label>
                     <button
                       type="button"
-                      className="btn btn-link position-absolute end-0 top-50 translate-middle-y text-brand-primary"
+                      className="btn btn-link position-absolute end-0 top-50 translate-middle-y text-secondary"
                       onClick={() => setShowPassword(!showPassword)}
                       style={{ textDecoration: 'none', zIndex: 10 }}
                     >
@@ -264,7 +336,7 @@ export default function Login() {
                     </span>
                     <a
                       href="#"
-                      className="text-brand-primary text-decoration-none fw-bold ms-2"
+                      className="text-brand-secondary text-decoration-none fw-bold ms-2"
                       onClick={toggleMode}
                     >
                       {isRegistering ? 'Inicia Sesión' : 'Regístrate aquí'}
@@ -281,7 +353,7 @@ export default function Login() {
               className="text-center mt-4 text-muted-custom"
               style={{ fontSize: '13px' }}
             >
-              EncryptedChat v1.0 - Copyright © 2026 StackFlow ACK 
+              EncryptedChat v1.0 - Copyright © 2026 StackFlow ACK
             </motion.p>
           </div>
         </div>

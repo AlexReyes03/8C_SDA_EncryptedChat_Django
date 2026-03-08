@@ -6,6 +6,8 @@ interface CreateGroupPayload {
     name: string;
     max_participants: number;
     is_private: boolean;
+    encrypted_symmetric_key?: string;
+    raw_aes_key?: string;
 }
 
 export interface UpdateGroupPayload {
@@ -37,10 +39,10 @@ export const groupServices = {
         return await fetchWrapper.post(`${GROUPS_URL}/${groupId}/leave/`, {});
     },
     getGroupMembers: async (groupId: number) => {
-        return await fetchWrapper.get(`${GROUPS_URL}/${groupId}/members/`);
+        return await fetchWrapper.get(`${GROUPS_URL}/${groupId}/members/?t=${new Date().getTime()}`);
     },
-    acceptGroupMember: async (groupId: number, userId: number) => {
-        return await fetchWrapper.put(`${GROUPS_URL}/${groupId}/requests/`, { user_id: userId, accept: true });
+    acceptGroupMember: async (groupId: number, userId: number, encryptedSymmetricKey: string) => {
+        return await fetchWrapper.put(`${GROUPS_URL}/${groupId}/requests/`, { user_id: userId, accept: true, encrypted_symmetric_key: encryptedSymmetricKey });
     },
     rejectGroupMember: async (groupId: number, userId: number) => {
         return await fetchWrapper.put(`${GROUPS_URL}/${groupId}/requests/`, { user_id: userId, accept: false });
