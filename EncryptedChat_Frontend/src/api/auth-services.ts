@@ -5,7 +5,7 @@ const AUTH_URL = '/users';
 export const authServices = {
     login: async (username: string, password: string) => {
         const response = await fetchWrapper.post(`${AUTH_URL}/login/`, { username, password });
-        return response; // Espera access y refresh
+        return response;
     },
     
     register: async (data: Record<string, unknown>) => {

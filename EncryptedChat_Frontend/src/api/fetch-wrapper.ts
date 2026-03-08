@@ -24,7 +24,7 @@ function request(method: string) {
 
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true', // Omitir página HTML de advertencia del túnel Ngrok gratuito
+            'ngrok-skip-browser-warning': 'true', // Omitir página HTML de advertencia del túnel Ngrok
             ...customHeaders
         };
 
@@ -54,7 +54,6 @@ async function handleResponse(response: Response) {
     try {
         data = text ? JSON.parse(text) : null;
     } catch {
-        // Si el backend (Django) truena y devuelve un HTML (ej. Error 500 por base de datos), fallamos seguro
         if (!response.ok) {
             throw new Error(`Error en el servidor backend HTTP ${response.status}. Puede que falten migraciones.`);
         }
@@ -63,7 +62,6 @@ async function handleResponse(response: Response) {
 
     if (!response.ok) {
         if ([401, 403].includes(response.status)) {
-            // Eliminar token si es inválido
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
         }

@@ -47,7 +47,6 @@ export default function Login() {
     setSuccessMsg('');
     setIsLoading(true);
 
-    // Evita congelar el navegador: Cede control al hilo de JS para poder mostrar el efecto "Loading"
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
@@ -76,7 +75,6 @@ export default function Login() {
         setPassword('');
         setSuccessMsg('¡Cuenta creada exitosamente! Por favor, inicia sesión.');
       } else {
-        // Llamada real al servicio de Django usando el fetchWrapper (Login)
         const response = await authServices.login(username, password);
 
         localStorage.setItem('access_token', response.access);
@@ -102,14 +100,9 @@ export default function Login() {
                 throw new Error("No vault found on server");
              }
           } catch {
-             // NO generar ni sobreescribir llaves de forma silenciosa.
-             // Causaba desincronización y pérdida total de grupos por fallos temporales de red.
-             // Obligamos al usuario a re-intentar para no corromper su estado en el Backend.
              throw new Error("Error E2EE: No se pudo descargar tu Bóveda de Llaves por un fallo de conexión o la cuenta está corrupta. Intenta nuevamente.");
           }
         } else {
-           // Retrocompatibilidad: Si la llave existe localmente pero el usuario fue creado antes de PBKDF2 Vault
-           // (o si cambió su contraseña), resubir la bóveda cifrada en el fondo de forma silenciosa.
            try {
                const rsaPublicKey = CHAT_CRYPTO.getPublicKeyFromPrivate(username);
                if (rsaPublicKey) {

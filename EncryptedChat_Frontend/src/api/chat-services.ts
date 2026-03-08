@@ -3,7 +3,6 @@ import { fetchWrapper } from './fetch-wrapper';
 const CHAT_URL = '/chat';
 
 export const chatServices = {
-    // Ejemplo de llamadas que podrían ser necesarias si hay REST para chat, 
     // la mayoría de interactividad será por WebSockets pero es útil para historial:
     
     getChatHistory: async (roomId: string) => {
@@ -23,7 +22,7 @@ export const chatServices = {
         url = url.replace(/^(ws:https:\/\/|wss:https:\/\/|https:\/\/)/, 'wss://');
         url = url.replace(/^(http:\/\/|ws:http:\/\/)/, 'ws://');
 
-        // Forzar WSS (Seguridad) si la página actual está HTTPS (Previene Mixed Content)
+        // Forzar WSS (Seguridad) si la página actual está HTTPS para prevenir Mixed Content
         if (window.location.protocol === 'https:' && url.startsWith('ws://')) {
             url = url.replace('ws://', 'wss://');
         }

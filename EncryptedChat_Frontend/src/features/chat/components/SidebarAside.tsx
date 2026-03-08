@@ -28,7 +28,6 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
     const [showAcceptModal, setShowAcceptModal] = useState(false);
     const [errorModal, setErrorModal] = useState<{ show: boolean, message: string }>({ show: false, message: '' });
 
-    // Kick Modal State
     const [showKickModal, setShowKickModal] = useState(false);
     const [selectedUserToKick, setSelectedUserToKick] = useState<{ id: number, username: string } | null>(null);
     const [isKicking, setIsKicking] = useState(false);
@@ -63,7 +62,6 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
         setIsKicking(true);
         try {
             await groupServices.kickGroupMember(activeGroupInfo.id, selectedUserToKick.id);
-            // Visual notification logic could be added here (e.g., Toast) instead of alert if requested
             setShowKickModal(false);
             setSelectedUserToKick(null);
             loadMembers();
@@ -195,7 +193,7 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
                 show={showAcceptModal}
                 onClose={() => {
                     setShowAcceptModal(false);
-                    if (activeGroupInfo) loadMembers(); // Reload when closing the modal
+                    if (activeGroupInfo) loadMembers();
                 }}
                 groupId={activeGroupInfo?.id || null}
             />

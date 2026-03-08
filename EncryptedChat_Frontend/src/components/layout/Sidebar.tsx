@@ -10,7 +10,6 @@ import GroupSettingsModal from '../../features/chat/components/GroupSettingsModa
 import { groupServices } from '../../api/group-services';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
-// Definición aproximada del modelo de Django
 export interface GroupData {
   id: number;
   name: string;
@@ -27,7 +26,6 @@ export default function Sidebar() {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
 
-  // Settings Modal State
   const [selectedGroupForSettings, setSelectedGroupForSettings] = useState<GroupData | null>(null);
 
   const [groups, setGroups] = useState<GroupData[]>([]);
@@ -59,9 +57,7 @@ export default function Sidebar() {
     setSelectedGroupForSettings(null);
 
     try {
-      // Recargar grupos y auto-seleccionar el último si es un modal de creación (esto asume que el backend los ordena, 
-      // o buscamos el último ID. Por simplicidad solo refrescamos la lista).
-      // Lo ideal aquí sería que el Modal devolviera el `newGroupId` y hacer set.
+      // Recargar grupos y auto-seleccionar el último si es un modal de creación
       const data = await groupServices.getMyGroups();
       setGroups(data);
     } catch {
@@ -74,7 +70,7 @@ export default function Sidebar() {
       setActiveGroupId(null);
       setMessages([]);
     } else {
-      setMessages([]); // Limpiar mensajes mientras carga el historial nuevo
+      setMessages([]);
       setActiveGroupId(id);
     }
   };
@@ -84,7 +80,7 @@ export default function Sidebar() {
       <div className="h-100 w-100 p-3 bg-sidebar border-end border-custom d-flex flex-column">
 
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h6 className="text-white mb-0 fw-bold">Grupos</h6>
+          <h6 className="text-white mb-0 fw-bold">Mis Grupos</h6>
         </div>
 
         {/* Acciones de Grupo */}
@@ -111,7 +107,7 @@ export default function Sidebar() {
         </div>
 
         {/* Lista Dinámica de Grupos */}
-        <div className="flex-grow-1 overflow-auto pe-2" style={{ cssText: "::-webkit-scrollbar { width: '4px' }" } as React.CSSProperties}>
+        <div className="flex-grow-1 overflow-auto" style={{ cssText: "::-webkit-scrollbar { width: '4px' }" } as React.CSSProperties}>
 
           {isLoadingGroups ? (
             <div className="text-center text-muted-custom mt-4 small">

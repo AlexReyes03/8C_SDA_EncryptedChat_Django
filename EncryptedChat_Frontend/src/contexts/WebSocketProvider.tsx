@@ -21,11 +21,9 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     // Al montar el Provider, intentamos conectar asumiendo que el usuario está logeado.
     const token = localStorage.getItem('access_token');
 
-    // Si no hay token, no intentamos conectar (útil para no estallar en layouts envueltos)
+    // Si no hay token, no intentamos conectar
     if (!token) return;
 
-    // Se asume que el backend acepta el token vía querystring o protocolo secundario:
-    // P.ej. ws://localhost:8000/ws/chat/?token=abc
     const wsUrl = `${chatServices.getWebSocketURL()}/chat/?token=${token}`;
     const websocket = new WebSocket(wsUrl);
 
@@ -42,7 +40,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
         const data = JSON.parse(event.data);
         const currentAES = activeAESKeyRef.current;
 
-        // Si es un evento de bienvenida con historial (desde get_group_history)
+        // Si es un evento de bienvenida con historial
         if (data.type === 'group_history' && data.messages) {
           const mappedHistory = data.messages.map((m: { message_id?: string, sender_username?: string, encrypted_content: string, [key: string]: unknown }) => {
             const decrypted = currentAES ? CHAT_CRYPTO.decryptAES(currentAES, m.encrypted_content) : m.encrypted_content;
@@ -56,7 +54,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
           });
           setMessages(mappedHistory);
         } else if (data.type === 'incoming_message') {
-          // Asegurarnos de ignorar si el mensaje es de una sala diferente
           setMessages((prev) => {
             const currentAES = activeAESKeyRef.current;
             const decrypted = currentAES ? CHAT_CRYPTO.decryptAES(currentAES, data.encrypted_content) : data.encrypted_content;
@@ -95,7 +92,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
       setWs(websocket);
     });
 
-    // Cleanup al desmontar el Provider (Usuario hace logout o cierra la pestaña)
+    // Cleanup al desmontar el Provider
     return () => {
       websocket.close();
     };
@@ -110,7 +107,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
 
       try {
-        // Descargar mi encrypted_symmetric_key temporalmente
         const users = await groupServices.getGroupMembers(activeGroupId);
         const myUsername = localStorage.getItem('username');
         const me = users.find((u: { username: string, encrypted_symmetric_key?: string }) => u.username === myUsername);
@@ -134,7 +130,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
 
         // Una vez puesta la llave, solicitamos el historial por socket
         if (ws && ws.readyState === WebSocket.OPEN) {
-          setMessages([]); // Limpiar mensajes
+          setMessages([]);
           ws.send(JSON.stringify({
             action: "get_group_history",
             group_id: activeGroupId

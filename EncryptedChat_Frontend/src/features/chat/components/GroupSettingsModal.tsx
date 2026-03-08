@@ -26,9 +26,6 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
     is_private: false
   });
 
-  // Extraemos invite_code por si viene en la metadata o el serializer.
-  // Django no nos retornaba `invite_code` en `/me/` (si no venía), 
-  // pero según el serializer del backend: GroupSerializer tiene "invite_code" a pesar de ser list API.
   const [inviteCode, setInviteCode] = useState<string>('');
 
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +33,6 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
   const [copied, setCopied] = useState(false);
   const { showToast } = useToast();
 
-  // States for ConfirmActionModal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmActionType, setConfirmActionType] = useState<'leave' | 'delete'>('leave');
 
@@ -105,7 +101,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
 
       onClose();
       setTimeout(() => {
-        window.location.reload(); // Hard reload on delete to clean states
+        window.location.reload();
       }, 2500);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Error al intentar eliminar el grupo.';
@@ -132,7 +128,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
       setShowConfirmModal(false);
       onClose();
       setTimeout(() => {
-        window.location.reload(); // Recargar para limpiar
+        window.location.reload();
       }, 2500);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Error al intentar abandonar el grupo.';

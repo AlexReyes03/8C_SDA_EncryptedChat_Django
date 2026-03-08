@@ -26,7 +26,6 @@ export const groupServices = {
         return await fetchWrapper.put(`${GROUPS_URL}/${groupId}/`, data);
     },
     getGroupInfo: async (groupId: number) => {
-        // Asumiendo que pudiese haber un endpoint de detalle, o podríamos filtrarlo desde /me
         return await fetchWrapper.get(`${GROUPS_URL}/${groupId}/`);
     },
     getMyGroups: async () => {

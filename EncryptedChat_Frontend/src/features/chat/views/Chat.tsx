@@ -17,8 +17,6 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isConnected, activeGroupId, sendMessage } = useWebSocket();
 
-  // Se extrae el username desde local storage para identificar si es el current user 
-  // O en un esquema avanzado, decodificando el access_token JWT.
   const currentUser = {
     apodo: localStorage.getItem('username') || 'Tú'
   };
@@ -35,7 +33,7 @@ export default function Chat() {
           const data = await groupServices.getGroupInfo(activeGroupId);
           setActiveGroupInfo(data);
         } catch {
-          // Failure silently omitted
+          // Error omitido silenciosamente
         }
       } else {
         setActiveGroupInfo(null);
