@@ -40,8 +40,8 @@ export default function Sidebar() {
       setIsLoadingGroups(true);
       const data = await groupServices.getMyGroups();
       setGroups(data);
-    } catch (error) {
-      console.error("Error cargando grupos:", error);
+    } catch {
+      // Catch empty silently
     } finally {
       setIsLoadingGroups(false);
     }
@@ -64,8 +64,8 @@ export default function Sidebar() {
       // Lo ideal aquí sería que el Modal devolviera el `newGroupId` y hacer set.
       const data = await groupServices.getMyGroups();
       setGroups(data);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Ignore initial load error
     }
   };
 
@@ -93,6 +93,7 @@ export default function Sidebar() {
             className="btn btn-sm text-white w-100 d-flex align-items-center justify-content-center border-custom"
             style={{ backgroundColor: 'rgba(255,255,255,0.05)', transition: 'background-color 0.2s' }}
             onClick={() => setShowJoin(true)}
+            data-bs-dismiss="offcanvas"
           >
             <GroupIcon fontSize="small" className="me-2 text-brand-secondary" />
             Unirse
@@ -102,6 +103,7 @@ export default function Sidebar() {
             className="btn btn-sm text-white w-100 d-flex align-items-center justify-content-center"
             style={{ backgroundColor: 'var(--brand-primary)', transition: 'opacity 0.2s' }}
             onClick={() => setShowCreate(true)}
+            data-bs-dismiss="offcanvas"
           >
             <AddCircleOutlineIcon fontSize="small" className="me-2" />
             Crear
@@ -126,32 +128,35 @@ export default function Sidebar() {
               return (
                 <div
                   key={group.id}
-                  onClick={() => handleGroupClick(group.id)}
-                  data-bs-dismiss="offcanvas"
                   className="d-flex align-items-center mb-2 p-2 rounded position-relative"
                   style={{
                     backgroundColor: activeGroupId === group.id ? '#7C148C' : 'rgba(255,255,255,0.05)',
-                    cursor: 'pointer',
                     transition: 'background-color 0.2s',
                     boxShadow: activeGroupId === group.id ? '0 0 10px rgba(124, 20, 140, 0.5)' : 'none'
                   }}
                   onMouseEnter={(e) => { if (activeGroupId !== group.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)' }}
                   onMouseLeave={(e) => { if (activeGroupId !== group.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)' }}
                 >
-                  <div
-                    className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      backgroundColor: 'var(--brand-secondary)',
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      fontSize: '1.2rem'
-                    }}
+                  {/* Área principal pulsable (Que Cierra el Offcanvas) */}
+                  <div 
+                    className="d-flex align-items-center flex-grow-1"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleGroupClick(group.id)}
+                    data-bs-dismiss="offcanvas"
                   >
-                    {group.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="d-flex w-100 justify-content-between align-items-center">
+                    <div
+                      className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: 'var(--brand-secondary)',
+                        color: '#fff',
+                        fontWeight: 'bold',
+                        fontSize: '1.2rem'
+                      }}
+                    >
+                      {group.name.charAt(0).toUpperCase()}
+                    </div>
                     <div className="d-flex align-items-center">
                       <h6 className="mb-0 text-white fw-medium text-truncate" style={{ maxWidth: '120px' }}>
                         {group.name}
@@ -163,16 +168,18 @@ export default function Sidebar() {
                         <LockIcon fontSize="small" className="ms-1 text-white-50" titleAccess="Grupo Privado" />
                       )}
                     </div>
+                  </div>
 
-                    <div className="d-flex align-items-center">
-                      <button
-                        className="btn btn-sm text-secondary p-1"
-                        onClick={(e) => { e.stopPropagation(); setSelectedGroupForSettings(group); }}
-                        title={isAdmin ? "Configuración de Grupo" : "Detalles del Grupo"}
-                      >
-                        <MoreVertIcon fontSize="small" />
-                      </button>
-                    </div>
+                  {/* Acciones del Grupo (Aisladas del Cierre Offcanvas) */}
+                  <div className="d-flex align-items-center ms-2">
+                    <button
+                      className="btn btn-sm text-secondary p-1"
+                      onClick={(e) => { e.stopPropagation(); setSelectedGroupForSettings(group); }}
+                      title={isAdmin ? "Configuración de Grupo" : "Detalles del Grupo"}
+                      data-bs-dismiss="offcanvas"
+                    >
+                      <MoreVertIcon fontSize="small" />
+                    </button>
                   </div>
                 </div>
               );

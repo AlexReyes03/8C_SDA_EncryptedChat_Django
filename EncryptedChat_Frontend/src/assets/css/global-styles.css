@@ -54,6 +54,23 @@ body {
   border-color: var(--border-color) !important;
 }
 
+/* Alertas Personalizadas */
+.custom-alert-success {
+  background-color: #198754 !important;
+  color: #ffffff !important;
+  border-color: #198754 !important;
+}
+
+.custom-alert-danger {
+  background-color: #dc3545 !important;
+  color: #ffffff !important;
+  border-color: #dc3545 !important;
+}
+
+.border-custom {
+  border-color: var(--border-color) !important;
+}
+
 /* Personalización del Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -81,18 +98,19 @@ input::-ms-clear {
 
 /* Autocomplete de inputs en Chrome fondo oscuro */
 input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus, 
-input:-webkit-autofill:active{
-    -webkit-box-shadow: 0 0 0 30px var(--bg-navbar) inset !important;
-    -webkit-text-fill-color: var(--text-primary) !important;
-    transition: background-color 5000s ease-in-out 0s;
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--bg-navbar) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Personalizar Color Global de los Placeholders */
 ::placeholder {
   color: rgba(255, 255, 255, 0.45) !important;
-  opacity: 1; /* Firefox necesita forzar la opacidad */
+  opacity: 1;
+  /* Firefox necesita forzar la opacidad */
 }
 
 ::-ms-input-placeholder {

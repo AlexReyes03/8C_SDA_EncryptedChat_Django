@@ -20,19 +20,19 @@ export default function AppLayout() {
         </div>
       </div>
 
-      {/* Offcanvas para Mobile Sidebar */}
-      <div className="offcanvas offcanvas-start bg-sidebar border-end border-custom" tabIndex={-1} id="mobileSidebar" aria-labelledby="mobileSidebarLabel" style={{ width: '300px' }}>
-        <div className="offcanvas-header border-bottom border-custom p-3 d-flex justify-content-between align-items-center">
-          <div className="d-flex align-items-center">
-            <img src={logoMini} alt="Logo" className="me-2" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
-            <span className="h5 mb-0 text-white fw-bold">Menú</span>
+        {/* Offcanvas para Mobile Sidebar */}
+        <div className="offcanvas offcanvas-start bg-sidebar border-end border-custom" tabIndex={-1} id="mobileSidebar" aria-labelledby="mobileSidebarLabel" style={{ width: '300px' }}>
+          <div className="offcanvas-header border-bottom border-custom p-3 d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center">
+              <img src={logoMini} alt="Logo" className="me-2" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+              <span className="h5 mb-0 text-white fw-bold">Menú</span>
+            </div>
+            <button type="button" className="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
           </div>
-          <button type="button" className="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div className="offcanvas-body p-0 d-flex flex-column overflow-hidden">
-          <Sidebar />
+          <div className="offcanvas-body p-0 d-flex flex-column overflow-hidden">
+            <Sidebar />
+          </div>
         </div>
       </div>
-    </div>
   );
 }

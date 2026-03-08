@@ -6,6 +6,7 @@ import { groupServices } from '../../../api/group-services';
 import type { GroupData } from '../../../components/layout/Sidebar';
 import AcceptUsersModal from './AcceptUsersModal';
 import ConfirmKickModal from './ConfirmKickModal';
+import ConfirmActionModal from './ConfirmActionModal';
 
 interface SidebarAsideProps {
     show: boolean;
@@ -25,6 +26,7 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
     const [members, setMembers] = useState<GroupMemberData[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [showAcceptModal, setShowAcceptModal] = useState(false);
+    const [errorModal, setErrorModal] = useState<{ show: boolean, message: string }>({ show: false, message: '' });
 
     // Kick Modal State
     const [showKickModal, setShowKickModal] = useState(false);
@@ -37,8 +39,8 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
         try {
             const data = await groupServices.getGroupMembers(activeGroupInfo.id);
             setMembers(data);
-        } catch (e) {
-            console.error("Error al cargar miembros del grupo", e);
+        } catch {
+            // Errores de carga ignorados para no molestar al usuario visualmente si se va la red un seg
         } finally {
             setIsLoading(false);
         }
@@ -65,10 +67,8 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
             setShowKickModal(false);
             setSelectedUserToKick(null);
             loadMembers();
-        } catch (e) {
-            console.error("Error al expulsar usuario", e);
-            // Could replace this alert with a Toast error message as well
-            window.alert("Error al expulsar al usuario.");
+        } catch {
+            setErrorModal({ show: true, message: "No se pudo expulsar al usuario en este momento." });
         } finally {
             setIsKicking(false);
         }
@@ -206,6 +206,16 @@ export default function SidebarAside({ show, onClose, activeGroupInfo }: Sidebar
                 onConfirm={confirmKick}
                 username={selectedUserToKick?.username || ''}
                 isLoading={isKicking}
+            />
+
+            <ConfirmActionModal
+                show={errorModal.show}
+                onClose={() => setErrorModal({ show: false, message: '' })}
+                onConfirm={() => setErrorModal({ show: false, message: '' })}
+                title="Error"
+                message={errorModal.message}
+                confirmText="Aceptar"
+                isLoading={false}
             />
         </>
     );
