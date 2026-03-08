@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import TagIcon from '@mui/icons-material/Tag';
 import { groupServices } from '../../../api/group-services';
+import { useToast } from '../../../hooks/useToast';
+import { mapDjangoErrors } from '../../../utils/error-mapper';
 
 interface JoinGroupModalProps {
   show: boolean;
@@ -13,52 +16,46 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
   const [inviteCode, setInviteCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const { showToast } = useToast();
 
   useEffect(() => {
-    if (!successMsg && !errorMsg) return;
+    if (!errorMsg) return;
 
     const timer = setTimeout(() => {
-      setSuccessMsg('');
       setErrorMsg('');
     }, 4000);
 
     return () => clearTimeout(timer);
-  }, [successMsg, errorMsg]);
+  }, [errorMsg]);
 
   useEffect(() => {
     if (!show) {
       setInviteCode('');
       setErrorMsg('');
-      setSuccessMsg('');
     }
   }, [show]);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    setSuccessMsg('');
     setIsLoading(true);
 
     try {
       const response = await groupServices.joinGroup(inviteCode.trim().toUpperCase());
       const isPending = response.membership?.status === 'pending';
 
-      setSuccessMsg(
+      showToast(
         isPending
           ? 'Solicitud enviada. Debes esperar la aprobación del administrador.'
           : `¡Te has unido exitosamente al grupo ${response.name || 'solicitado'}!`
       );
 
-      setTimeout(() => {
-        onClose();
-        setInviteCode('');
-        setSuccessMsg('');
-      }, 3500);
+      onClose();
+      setInviteCode('');
 
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'El código es inválido o el grupo ya está lleno.';
-      setErrorMsg(errorMessage);
+      setErrorMsg(mapDjangoErrors(errorMessage, 'group'));
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +63,7 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
 
   if (!show) return null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {show && (
         <>
@@ -102,12 +99,6 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                   <div className="modal-body text-white">
 
                     <AnimatePresence>
-                      {successMsg && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2 fw-medium text-dark" role="alert" style={{ backgroundColor: '#198754', color: '#fff' }}>
-                          <strong className="text-white">Éxito:</strong> <span className="text-white">{successMsg}</span>
-                        </motion.div>
-                      )}
-
                       {errorMsg && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 fw-medium text-dark" role="alert" style={{ backgroundColor: '#dc3545', color: '#fff' }}>
                           <span className="text-white">{errorMsg}</span>
@@ -115,7 +106,7 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                       )}
                     </AnimatePresence>
 
-                    <fieldset disabled={isLoading || successMsg !== ''}>
+                    <fieldset disabled={isLoading}>
                       <div className="mb-3">
                         <label htmlFor="inviteCode" className="form-label text-white fw-semibold small mb-2">Código de Invitación</label>
                         <input
@@ -124,12 +115,16 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                           id="inviteCode"
                           value={inviteCode}
                           onChange={(e) => {
-                            setInviteCode(e.target.value.toUpperCase());
+                            let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                            if (value.length > 3) {
+                              value = value.slice(0, 3) + '-' + value.slice(3, 7);
+                            }
+                            setInviteCode(value);
                             setErrorMsg('');
-                            setSuccessMsg('');
                           }}
                           required
-                          placeholder="XXXX-1234"
+                          maxLength={8}
+                          placeholder="XXX-1234"
                           style={{ letterSpacing: '2px' }}
                           autoComplete="off"
                         />
@@ -144,7 +139,7 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
                     <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={isLoading}>
                       Cancelar
                     </button>
-                    <button type="submit" disabled={isLoading || successMsg !== ''} className="btn text-white text-uppercase fw-bold" style={{ backgroundColor: 'var(--brand-secondary)', minWidth: '130px' }}>
+                    <button type="submit" disabled={isLoading} className="btn text-white text-uppercase fw-bold" style={{ backgroundColor: 'var(--brand-secondary)', minWidth: '130px' }}>
                       {isLoading ? (
                         <>
                           <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -161,6 +156,7 @@ export default function JoinGroupModal({ show, onClose }: JoinGroupModalProps) {
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -10,6 +11,8 @@ import type { UpdateGroupPayload } from '../../../api/group-services';
 import type { GroupData } from '../../../components/layout/Sidebar';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ConfirmActionModal from './ConfirmActionModal';
+import { useToast } from '../../../hooks/useToast';
+import { mapDjangoErrors } from '../../../utils/error-mapper';
 
 interface GroupSettingsModalProps {
   show: boolean;
@@ -30,8 +33,8 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
   const [copied, setCopied] = useState(false);
+  const { showToast } = useToast();
 
   // States for ConfirmActionModal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -45,7 +48,6 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
       });
       setInviteCode((group as unknown as Record<string, unknown>).invite_code as string || 'SIN-CÓDIGO');
       setErrorMsg('');
-      setSuccessMsg('');
     }
   }, [group, show]);
 
@@ -68,22 +70,18 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
     if (!group) return;
 
     setErrorMsg('');
-    setSuccessMsg('');
     setIsLoading(true);
 
     try {
       await groupServices.updateGroup(group.id, formData);
-      setSuccessMsg(`¡Configuraciones guardadas para ${formData.name}!`);
+      showToast(`¡Configuraciones guardadas para ${formData.name}!`);
 
-      // Cerrar y resetear después de unos segundos
-      setTimeout(() => {
-        onClose();
-        setSuccessMsg('');
-      }, 1500);
+      // Cerrar y resetear de inmediato
+      onClose();
 
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido al intentar actualizar el grupo.';
-      setErrorMsg(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Error al intentar actualizar el grupo.';
+      setErrorMsg(mapDjangoErrors(errorMessage, 'group'));
     } finally {
       setIsLoading(false);
     }
@@ -98,22 +96,20 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
     if (!group) return;
 
     setErrorMsg('');
-    setSuccessMsg('');
     setIsLoading(true);
 
     try {
       await groupServices.deleteGroup(group.id);
-      setSuccessMsg('El grupo ha sido eliminado exitosamente.');
+      showToast('El grupo ha sido eliminado exitosamente.');
       setShowConfirmModal(false);
 
+      onClose();
       setTimeout(() => {
-        onClose();
         window.location.reload(); // Hard reload on delete to clean states
-      }, 1500);
-
+      }, 2500);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Error al intentar eliminar el grupo.';
-      setErrorMsg(errorMessage);
+      setErrorMsg(mapDjangoErrors(errorMessage, 'group'));
     } finally {
       setIsLoading(false);
     }
@@ -128,20 +124,19 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
     if (!group) return;
 
     setErrorMsg('');
-    setSuccessMsg('');
     setIsLoading(true);
 
     try {
       await groupServices.leaveGroup(group.id);
-      setSuccessMsg('Has abandonado el grupo exitosamente.');
+      showToast('Has abandonado el grupo exitosamente.');
       setShowConfirmModal(false);
+      onClose();
       setTimeout(() => {
-        onClose();
         window.location.reload(); // Recargar para limpiar
-      }, 1500);
+      }, 2500);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Error al intentar abandonar el grupo.';
-      setErrorMsg(errorMessage);
+      setErrorMsg(mapDjangoErrors(errorMessage, 'group'));
     } finally {
       setIsLoading(false);
     }
@@ -159,7 +154,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
 
   const isAdmin = group.membership?.role === 'admin';
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {show && (
         <>
@@ -197,17 +192,10 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
                   <div className="modal-body text-white">
 
                     <AnimatePresence>
-                      {successMsg && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2 mb-3" role="alert">
-                          <strong>¡Listo!</strong> {successMsg}
-                          <button type="button" className="btn-close btn-close-white" style={{ filter: 'invert(1)' }} onClick={() => setSuccessMsg('')}></button>
-                        </motion.div>
-                      )}
-
                       {errorMsg && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 mb-3" role="alert">
-                          {errorMsg}
-                          <button type="button" className="btn-close btn-close-white" onClick={() => setErrorMsg('')}></button>
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="custom-alert-danger fade show small py-2 px-3 mb-3 fw-medium rounded d-flex justify-content-between align-items-center shadow-sm" role="alert">
+                          <span className="text-white">{errorMsg}</span>
+                          <button type="button" className="btn-close btn-close-white ms-auto m-0 p-0" style={{ fontSize: '0.8rem' }} onClick={() => setErrorMsg('')}></button>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -254,7 +242,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
                       </div>
                     </div>
 
-                    <fieldset disabled={isLoading || successMsg !== ''}>
+                    <fieldset disabled={isLoading}>
                       {isAdmin && (
                         <>
                           <div className="mb-3">
@@ -337,7 +325,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
                         Cerrar
                       </button>
                       {isAdmin && (
-                        <button type="submit" disabled={isLoading || successMsg !== ''} className="btn btn-brand-primary text-white fw-bold" style={{ backgroundColor: 'var(--brand-primary)', minWidth: '150px' }}>
+                        <button type="submit" disabled={isLoading} className="btn btn-brand-primary text-white fw-bold" style={{ backgroundColor: 'var(--brand-primary)', minWidth: '150px' }}>
                           {isLoading ? (
                             <>
                               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -371,6 +359,7 @@ export default function GroupSettingsModal({ show, onClose, group }: GroupSettin
           />
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

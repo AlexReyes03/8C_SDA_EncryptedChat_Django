@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import { groupServices } from '../../../api/group-services';
 import { useWebSocket } from '../../../hooks/useWebSocket';
+import { useToast } from '../../../hooks/useToast';
+import { CHAT_CRYPTO } from '../../../utils/crypto';
+import { mapDjangoErrors } from '../../../utils/error-mapper';
 
 interface CreateGroupModalProps {
   show: boolean;
@@ -18,27 +22,25 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
   });
 
   const { setActiveGroupId } = useWebSocket();
+  const { showToast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
-    if (!successMsg && !errorMsg) return;
+    if (!errorMsg) return;
 
     const timer = setTimeout(() => {
-      setSuccessMsg('');
       setErrorMsg('');
     }, 5000);
 
     return () => clearTimeout(timer);
-  }, [successMsg, errorMsg]);
+  }, [errorMsg]);
 
   useEffect(() => {
     if (!show) {
       setFormData({ name: '', max_participants: 50, is_private: false });
       setErrorMsg('');
-      setSuccessMsg('');
     }
   }, [show]);
 
@@ -49,34 +51,49 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
       [e.target.name]: value
     });
     setErrorMsg('');
-    setSuccessMsg('');
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    setSuccessMsg('');
     setIsLoading(true);
 
     try {
-      const response = await groupServices.createGroup(formData);
-      setSuccessMsg('¡Grupo creado exitosamente!');
+      const username = localStorage.getItem('username');
+      if (!username) throw new Error("No has iniciado sesión correctamente.");
+
+      const pubKey = CHAT_CRYPTO.getPublicKeyFromPrivate(username);
+      if (!pubKey) throw new Error("Tu sesión es inválida. Cierra sesión y vuelve a entrar.");
+
+      // Generar llave de grupo AES
+      const aesKey = CHAT_CRYPTO.generateGroupAESKey();
+
+      // Encriptar la nueva llave AES con nuestra llave Pública RSA
+      const encryptedAES = CHAT_CRYPTO.encryptRSA(pubKey, aesKey);
+
+      if (!encryptedAES) throw new Error("Error de seguridad al crear el grupo.");
+
+      const payload = {
+        ...formData,
+        encrypted_symmetric_key: encryptedAES,
+        ...(formData.is_private ? {} : { raw_aes_key: aesKey })
+      };
+
+      const response = await groupServices.createGroup(payload);
+      showToast('¡Grupo creado exitosamente!');
 
       // Select the active group id right away
       if (response && response.id) {
         setActiveGroupId(response.id);
       }
 
-      // Reset form for next time
-      setTimeout(() => {
-        onClose();
-        setFormData({ name: '', max_participants: 50, is_private: false });
-        setSuccessMsg('');
-      }, 3000);
+      // Cerrado instantáneo y reset
+      onClose();
+      setFormData({ name: '', max_participants: 50, is_private: false });
 
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido de red al intentar crear el grupo.';
-      setErrorMsg(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Error al intentar crear el grupo.';
+      setErrorMsg(mapDjangoErrors(errorMessage, 'group'));
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +101,7 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
 
   if (!show) return null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {show && (
         <>
@@ -122,22 +139,14 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                   <div className="modal-body text-white">
 
                     <AnimatePresence>
-                      {successMsg && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-success alert-dismissible fade show small py-2 mb-3 fw-medium text-dark" role="alert" style={{ backgroundColor: '#198754', color: '#fff' }}>
-                          <strong className="text-white">¡Listo!</strong> <span className="text-white">{successMsg}</span>
-                          <button type="button" className="btn-close btn-close-white" onClick={() => setSuccessMsg('')}></button>
-                        </motion.div>
-                      )}
-
                       {errorMsg && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="alert alert-danger alert-dismissible fade show small py-2 mb-3 fw-medium text-dark" role="alert" style={{ backgroundColor: '#dc3545', color: '#fff' }}>
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="custom-alert-danger fade show small py-2 px-3 mb-3 fw-medium rounded d-flex justify-content-between align-items-center shadow-sm" role="alert">
                           <span className="text-white">{errorMsg}</span>
-                          <button type="button" className="btn-close btn-close-white" onClick={() => setErrorMsg('')}></button>
                         </motion.div>
                       )}
                     </AnimatePresence>
 
-                    <fieldset disabled={isLoading || successMsg !== ''}>
+                    <fieldset disabled={isLoading}>
                       <div className="mb-3">
                         <label htmlFor="groupName" className="form-label text-white fw-semibold small mb-2">Nombre del Grupo</label>
                         <input
@@ -207,7 +216,7 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
                     <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={isLoading}>
                       Cancelar
                     </button>
-                    <button type="submit" disabled={isLoading || successMsg !== ''} className="btn btn-brand-primary text-white fw-bold" style={{ backgroundColor: 'var(--brand-primary)', minWidth: '150px' }}>
+                    <button type="submit" disabled={isLoading} className="btn btn-brand-primary text-white fw-bold" style={{ backgroundColor: 'var(--brand-primary)', minWidth: '150px' }}>
                       {isLoading ? (
                         <>
                           <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -224,6 +233,7 @@ export default function CreateGroupModal({ show, onClose }: CreateGroupModalProp
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
