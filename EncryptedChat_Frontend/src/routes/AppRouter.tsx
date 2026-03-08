@@ -3,7 +3,6 @@ import AppLayout from '../components/layout/AppLayout';
 import PublicRoute from './PublicRoute';
 import PrivateRoute from './PrivateRoute';
 
-// Vistas
 import Login from '../features/auth/views/Login';
 import Chat from '../features/chat/views/Chat';
 
@@ -20,7 +19,6 @@ export default function AppRouter() {
                 <Route element={<PrivateRoute />}>
                     <Route element={<AppLayout />}>
                         <Route path="/chat" element={<Chat />} />
-                        {/* Agrega más rutas privadas que deban renderizarse dentro del AppLayout aquí */}
                     </Route>
                 </Route>
 
