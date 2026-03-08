@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 
@@ -12,7 +13,7 @@ interface ConfirmKickModalProps {
 export default function ConfirmKickModal({ show, onClose, onConfirm, username, isLoading }: ConfirmKickModalProps) {
     if (!show) return null;
 
-    return (
+    return createPortal(
         <AnimatePresence>
             <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex={-1}>
                 <div className="modal-dialog modal-dialog-centered">
@@ -61,6 +62,7 @@ export default function ConfirmKickModal({ show, onClose, onConfirm, username, i
                     </motion.div>
                 </div>
             </div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

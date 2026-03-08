@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import type { ReactNode } from 'react';
@@ -18,7 +19,7 @@ export default function ConfirmActionModal({
 }: ConfirmActionModalProps) {
     if (!show) return null;
 
-    return (
+    return createPortal(
         <AnimatePresence>
             <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1060 }} tabIndex={-1}>
                 <div className="modal-dialog modal-dialog-centered">
@@ -67,6 +68,7 @@ export default function ConfirmActionModal({
                     </motion.div>
                 </div>
             </div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }
