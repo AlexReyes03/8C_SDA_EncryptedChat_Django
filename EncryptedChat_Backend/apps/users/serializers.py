@@ -41,10 +41,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         max_length=PUBLIC_KEY_MAX_LENGTH,
         help_text="Clave pública en formato OpenSSH (ssh-rsa AAAAB3...) o PEM",
     )
+    encrypted_private_key = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+    )
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "public_key")
+        fields = ("username", "email", "password", "public_key", "encrypted_private_key")
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Ya existe un usuario con ese correo electrónico.")
+        return value
 
     def validate_public_key(self, value):
         value = value.strip()
@@ -57,6 +67,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> User:
         public_key_data = validated_data.pop("public_key")
+        encrypted_private_key = validated_data.pop("encrypted_private_key", None)
         user = User.objects.create_user(
             username=validated_data["username"],
             email=validated_data.get("email", ""),
@@ -64,6 +75,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
         # Save the public key associated with the user
-        PublicKey.objects.create(user=user, key_data=public_key_data)
+        PublicKey.objects.create(
+            user=user, 
+            key_data=public_key_data, 
+            encrypted_private_key=encrypted_private_key
+        )
 
         return user

@@ -6,8 +6,8 @@ class PublicKey(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="public_key"
     )
-    # RSA keys can be long, so TextField is better than CharField
     key_data = models.TextField(help_text="PEM formatted RSA Public Key")
+    encrypted_private_key = models.TextField(null=True, blank=True, help_text="User's RSA Private Key encrypted with their password")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
